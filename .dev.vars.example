@@ -1,23 +1,29 @@
-# ローカル/Workers 開発用の環境変数サンプル。
-# Node: これらを環境変数として渡す（例: `set -a; source .dev.vars; set +a; bun run dev`）。
-# Workers: 非秘密は wrangler.toml [vars]、秘密は `wrangler secret put <NAME>` で投入。
-# 実ファイル(.dev.vars / .env)は .gitignore 済み。リポジトリにコミットしないこと。
+# ローカル検証用の環境変数サンプル。値は docker-compose の既定に合わせてある。
+# 使い方:  cp .dev.vars.example .dev.vars  → SEED_EMAIL を自分のメールに変更
+#         set -a; source .dev.vars; set +a; bun run dev
+# 実ファイル(.dev.vars / .env)は .gitignore 済み。コミットしないこと。
 
-# --- DB (Postgres 一本化) ---
-DATABASE_URL=postgres://user:pass@localhost:5432/mdcollab
+# --- DB (docker-compose: postgres) ---
+DATABASE_URL=postgres://mdcollab:mdcollab@localhost:5432/mdcollab
 
-# --- 本体ストア (S3 互換: R2/S3/GCS) ---
-S3_ENDPOINT=https://<acct>.r2.cloudflarestorage.com
+# --- 本体ストア (docker-compose: SeaweedFS S3, :8333) ---
+S3_ENDPOINT=http://localhost:8333
 S3_BUCKET=mdcollab-docs-dev
-S3_REGION=auto
-S3_ACCESS_KEY_ID=
-S3_SECRET_ACCESS_KEY=
+S3_REGION=us-east-1
+S3_ACCESS_KEY_ID=test
+S3_SECRET_ACCESS_KEY=test
 
-# --- 認証 (自前 Google OIDC) ---
-SESSION_SECRET=change-me-long-random
+# --- 認証 ---
+SESSION_SECRET=local-dev-secret-change-me
+# ⚠ ローカル検証用の抜け道。Google OAuth 無しでログインできる。本番では必ず外す。
+DEV_AUTH=1
+# 本物の Google OIDC を試すとき（任意・docs/google-oauth-setup.md）:
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 # ALLOWED_DOMAIN=your-workspace-domain.com
 
 BASE_URL=http://localhost:8787
 PORT=8787
+
+# --- seed 用（あなたのメールに変更） ---
+SEED_EMAIL=you@example.com

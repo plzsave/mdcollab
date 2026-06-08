@@ -48,6 +48,24 @@ bun run dev                      # http://localhost:8787/health
 
 DB マイグレーション: `bun run db:generate` → `bun run db:migrate`。
 
+### ローカル実起動の検証
+
+バッキングサービス（Postgres + S3互換）を docker-compose で建て、アプリはホストで動かす。
+**Google OAuth は不要**（`DEV_AUTH=1` の dev ログインを使う）。手順は **[docs/local-dev.md](docs/local-dev.md)**。
+
+```bash
+cp .dev.vars.example .dev.vars   # SEED_EMAIL を自分のメールに
+set -a; source .dev.vars; set +a
+make up        # postgres + SeaweedFS S3
+make migrate   # スキーマ適用
+make seed      # member + folder + document を投入
+bun run dev    # http://localhost:8787
+```
+
+S3 互換ストアは **SeaweedFS** を採用（MinIO/LocalStack 不使用・軽量単一プロセス・固定キー即利用）。
+別実装にしたい場合は `docker-compose.yml` の `s3` サービスを差し替え、`S3_ENDPOINT` を合わせるだけ
+（アプリは path-style なので無改修）。本物の Google ログインを試す手順は **[docs/google-oauth-setup.md](docs/google-oauth-setup.md)**。
+
 ## 実装済み / 未実装
 
 - ✅ ポータブルコア・アダプタ2種（CF/Node）・Drizzle スキーマ・DocumentStore(S3)・OIDC/セッション・

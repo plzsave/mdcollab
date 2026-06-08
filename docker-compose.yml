@@ -1,0 +1,42 @@
+# ローカル検証用のバッキングサービス（Postgres + S3互換）。
+# アプリ本体はホストで `bun run dev`（ホットリロード）。compose は DB と S3 だけ建てる。
+#   起動: make up   / 停止: make down
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: mdcollab
+      POSTGRES_PASSWORD: mdcollab
+      POSTGRES_DB: mdcollab
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mdcollab -d mdcollab"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  # S3 互換ストレージ。MinIO は使わず SeaweedFS を採用（軽量・単一プロセス・固定キー即利用）。
+  # バケットは初回 PUT で自動生成される（Admin 権限の identity）。
+  # S3 gateway:8333 / filer browser:8888（デバッグ用）。
+  s3:
+    image: chrislusf/seaweedfs:latest
+    command: server -s3 -dir=/data -s3.config=/etc/seaweedfs/s3.json
+    ports:
+      - "8333:8333" # S3 API（アプリ/seed が使う）
+      - "8888:8888" # filer ブラウザ（中身確認用・任意）
+    volumes:
+      - ./docker/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+      - seaweeddata:/data
+    healthcheck:
+      # master UI(9333) で起動確認（コンテナ内チェックなので未公開でも可）
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9333/cluster/status >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  pgdata:
+  seaweeddata:
