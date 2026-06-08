@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "seed": "bun run scripts/seed.ts"
   },
   "dependencies": {
     "aws4fetch": "^1.0.20",

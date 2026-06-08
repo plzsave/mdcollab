@@ -62,5 +62,28 @@ export function authRoutes(deps: Deps) {
     return c.json({ ok: true });
   });
 
+  // ⚠ ローカル検証専用。DEV_AUTH=1 のときだけ生える。Google OAuth 抜きでセッションを発行。
+  // GET /api/auth/dev-login?email=you@example.com[&name=You]
+  if (deps.config.devAuth) {
+    app.get("/dev-login", async (c) => {
+      const email = c.req.query("email");
+      if (!email) {
+        return c.json({ error: { code: "BAD_REQUEST", message: "email query required" } }, 400);
+      }
+      const token = await createSession(
+        { email, name: c.req.query("name") },
+        deps.config.sessionSecret,
+      );
+      setCookie(c, SESSION_COOKIE, token, {
+        httpOnly: true,
+        secure,
+        sameSite: "Lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+      return c.json({ ok: true, email, devAuth: true });
+    });
+  }
+
   return app;
 }

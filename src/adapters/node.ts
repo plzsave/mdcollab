@@ -31,6 +31,7 @@ const config: AppConfig = {
     clientSecret: required("GOOGLE_CLIENT_SECRET"),
   },
   allowedDomain: process.env.ALLOWED_DOMAIN,
+  devAuth: process.env.DEV_AUTH === "1", // ローカル検証専用（cloudflare アダプタには載せない）
 };
 
 const app = createApp({ db, store, config });
