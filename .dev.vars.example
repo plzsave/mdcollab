@@ -1,0 +1,23 @@
+# ローカル/Workers 開発用の環境変数サンプル。
+# Node: これらを環境変数として渡す（例: `set -a; source .dev.vars; set +a; bun run dev`）。
+# Workers: 非秘密は wrangler.toml [vars]、秘密は `wrangler secret put <NAME>` で投入。
+# 実ファイル(.dev.vars / .env)は .gitignore 済み。リポジトリにコミットしないこと。
+
+# --- DB (Postgres 一本化) ---
+DATABASE_URL=postgres://user:pass@localhost:5432/mdcollab
+
+# --- 本体ストア (S3 互換: R2/S3/GCS) ---
+S3_ENDPOINT=https://<acct>.r2.cloudflarestorage.com
+S3_BUCKET=mdcollab-docs-dev
+S3_REGION=auto
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+
+# --- 認証 (自前 Google OIDC) ---
+SESSION_SECRET=change-me-long-random
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+# ALLOWED_DOMAIN=your-workspace-domain.com
+
+BASE_URL=http://localhost:8787
+PORT=8787

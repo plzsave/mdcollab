@@ -1,0 +1,33 @@
+name: ci
+
+# 個人(Cloudflare)側の CI。職場(AWS)は CodePipeline/CodeBuild が同じ repo スクリプトを呼ぶ（§5.2）。
+# このワークフローは「秘密注入 + repo スクリプト呼び出し」だけを担い、デプロイ実体は持たない。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: make check # typecheck + test
+
+  deploy-cf:
+    needs: check
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      # Cloudflare は GitHub OIDC 連携が無いためスコープを絞った API トークンを使う（§5.2）
+      - run: make deploy-cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          BASE_URL: ${{ vars.BASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
