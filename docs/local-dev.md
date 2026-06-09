@@ -7,6 +7,7 @@
 
 - Docker（`docker compose`）
 - bun（インストール済み）
+- direnv（環境変数の自動読み込み用・任意だが推奨）
 - `curl` と `jq`（任意・出力整形用）
 
 ## 手順
@@ -16,8 +17,10 @@
 ```bash
 cp .dev.vars.example .dev.vars
 # .dev.vars の SEED_EMAIL を自分のメールに変更（dev ログインで使う email と揃える）
-set -a; source .dev.vars; set +a
+direnv allow   # 初回だけ。以後はこのディレクトリに入ると .dev.vars が自動で読み込まれる
+echo $DATABASE_URL   # 値が出れば読み込み成功
 ```
+direnv が無い環境では代わりに毎回 `set -a; source .dev.vars; set +a` で読み込む。
 
 ### 2. バッキングサービス起動（Postgres + S3）
 
@@ -74,11 +77,13 @@ curl -s -b cookie.txt -X PUT localhost:8787/api/documents/seed-doc \
 期待結果:
 - 2回目の PUT が `409` ＋ `{"error":{"code":"CONFLICT",...},"current":2}`。
 - `document_versions` に v1/v2 が積まれている（版管理＝Drive 安全網の代替・§6.4）。
-- S3 に `docs/seed-doc/1.md` と `docs/seed-doc/2.md` が出来ている（filer ブラウザで確認）:
+- S3 に `docs/seed-doc/1.md` と `docs/seed-doc/2.md` が出来ている（filer で確認・任意）:
   ```bash
-  curl -s http://localhost:8888/buckets/mdcollab-docs-dev/docs/seed-doc/ | jq
+  # filer は既定で HTML を返すので JSON が欲しければ Accept ヘッダを付ける
+  curl -s -H 'Accept: application/json' http://localhost:8888/buckets/mdcollab-docs-dev/docs/seed-doc/ | jq
   ```
-  （GET /api/documents が本文を返せている時点で S3 から読めている証拠でもある）
+  ブラウザで `http://localhost:8888/buckets/mdcollab-docs-dev/docs/seed-doc/` を開いてもよい。
+  （そもそも GET /api/documents が本文を返せている時点で S3 から読めている証拠なので、この確認は任意）
 
 ### 片付け
 

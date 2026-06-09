@@ -23,15 +23,19 @@ const store = createStore({
   secretAccessKey: required("S3_SECRET_ACCESS_KEY"),
 });
 
+// ローカル検証専用（cloudflare アダプタには載せない）。dev 認証時は Google OAuth を使わないので
+// GOOGLE_CLIENT_ID/SECRET は必須にしない。実 OIDC を試すときだけ .dev.vars に入れる。
+const devAuth = process.env.DEV_AUTH === "1";
+
 const config: AppConfig = {
   baseUrl: process.env.BASE_URL ?? "http://localhost:8787",
   sessionSecret: required("SESSION_SECRET"),
   google: {
-    clientId: required("GOOGLE_CLIENT_ID"),
-    clientSecret: required("GOOGLE_CLIENT_SECRET"),
+    clientId: devAuth ? (process.env.GOOGLE_CLIENT_ID ?? "") : required("GOOGLE_CLIENT_ID"),
+    clientSecret: devAuth ? (process.env.GOOGLE_CLIENT_SECRET ?? "") : required("GOOGLE_CLIENT_SECRET"),
   },
   allowedDomain: process.env.ALLOWED_DOMAIN,
-  devAuth: process.env.DEV_AUTH === "1", // ローカル検証専用（cloudflare アダプタには載せない）
+  devAuth,
 };
 
 const app = createApp({ db, store, config });

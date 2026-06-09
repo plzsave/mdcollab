@@ -42,7 +42,7 @@ bun install
 bun run typecheck
 bun run test
 cp .dev.vars.example .dev.vars   # 値を埋める
-set -a; source .dev.vars; set +a
+direnv allow                     # 初回だけ。以後 cd で .dev.vars が自動読み込み
 bun run dev                      # http://localhost:8787/health
 ```
 
@@ -55,7 +55,7 @@ DB マイグレーション: `bun run db:generate` → `bun run db:migrate`。
 
 ```bash
 cp .dev.vars.example .dev.vars   # SEED_EMAIL を自分のメールに
-set -a; source .dev.vars; set +a
+direnv allow   # 初回だけ。以後 cd するだけで .dev.vars が自動で環境変数化される
 make up        # postgres + SeaweedFS S3
 make migrate   # スキーマ適用
 make seed      # member + folder + document を投入
