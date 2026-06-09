@@ -4,9 +4,10 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 移行計画書 [`md-collab-migration-plan.md`](../../md-collab-migration-plan.md)。
 
 - 凡例: `[x]` 実装済み / `[ ]` 未実装
-- 現状: **着手順3まで完了**（Statuses/Members/Documents/Threads・Comments/Notifications/通知発火）。ローカル実機で postgres18 + SeaweedFS + 自前セッション + If-Match→409 を確認済み。
-- 実装済み API: state / folders(GET・POST・文書一覧) / documents(全10) / statuses(GET・PUT) / members(CRUD) / **threads・comments(7)** / **notifications(3)** ＋認証一式。
-- テスト: pglite + メモリストアで結合テスト 48 本。`bun run test`。
+- 現状: **着手順4まで完了**（…Threads/Comments/Notifications + AI Settings/Review）。**バックエンドAPIはほぼパリティ到達**（残りは着手順5の小物）。
+- 実装済み API: state / folders / documents(全10) / statuses / members / threads・comments(7) / notifications(3) / **ai settings・secrets(7)** / **ai review・revision(5)** ＋認証一式。
+- 横断: 通知発火 / **暗号化保存(AES-GCM)** / **AI プロバイダ層(anthropic・openai)** / **SSE ストリーミング**。
+- テスト: pglite + メモリストア + fake LLM で結合テスト 60 本。`bun run test`。
 
 最終更新: 2026-06-09
 
@@ -60,29 +61,30 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - [x] `POST /api/notifications/read-all`
 
 ### 7. AI Settings / Secrets
-- [ ] `GET /api/ai/settings`（**キー平文を返さない**・has-key 真偽のみ）
-- [ ] `PUT /api/ai/settings`（キー暗号化保存・返却は非平文）
-- [ ] `DELETE /api/ai/keys/:provider`
-- [ ] `PUT /api/ai/github/pat`（PAT 暗号化保存）
-- [ ] `DELETE /api/ai/github/pat?scope=`
-- [ ] `PUT /api/ai/github/repo`
-- [ ] `GET /api/ai/models?provider=`（プロバイダ /models 中継）
+- [x] `GET /api/ai/settings`（**キー平文を返さない**・has-key 真偽/PATスコープのみ）
+- [x] `PUT /api/ai/settings`（provider/model + キー暗号化保存・返却は非平文）
+- [x] `DELETE /api/ai/keys/:provider`
+- [x] `PUT /api/ai/github/pat`（PAT 暗号化保存）
+- [x] `DELETE /api/ai/github/pat?scope=`
+- [x] `PUT /api/ai/github/repo`
+- [x] `GET /api/ai/models?provider=`（プロバイダ /models 中継）
 
 ### 8. AI Review / Revision
-- [ ] `POST /api/documents/:id/review`（**SSE 候補**）
-- [ ] `POST /api/documents/:id/review-repo`（GitHub リポジトリ文脈・**SSE 候補**）
-- [ ] `GET /api/documents/:id/reviews`（保存済み一覧）
-- [ ] `POST /api/documents/:id/revision`（pending ドラフト・doc×user で1件・**SSE 候補**）
-- [ ] `DELETE /api/documents/:id/revision`（discardPendingRevision）
+- [x] `POST /api/documents/:id/review`（SSE 対応: `?stream=1`）
+- [x] `POST /api/documents/:id/review-repo`（repo 参照をプロンプトに含む。リポジトリ本体取得は follow-up）
+- [x] `GET /api/documents/:id/reviews`（保存済み一覧）
+- [x] `POST /api/documents/:id/revision`（pending ドラフト・doc×user で1件・upsert）
+- [x] `DELETE /api/documents/:id/revision`（discardPendingRevision）
 
 ---
 
 ## B. 横断機能（API と並走）
-- [ ] AI キー / GitHub PAT の**暗号化保存**（§6.5）— 平文返却しない不変条件の実体
+- [x] AI キー / GitHub PAT の**暗号化保存**（§6.5）— `src/crypto.ts`（Web Crypto AES-GCM）。平文返却しない不変条件をテストで担保
 - [x] 通知の**副作用発火**（mention / reply / resolve）— `src/notify.ts` に集約。メンバーのみ通知・actor 除外・mention と reply は二重にしない
-- [ ] AI レビューの **SSE ストリーミング**（Workers の CPU 制約 vs Lambda 15分の差を吸収・§8）
+- [x] AI レビューの **SSE ストリーミング**（`hono/streaming` の `streamSSE`・`?stream=1`）
+- [x] **AI プロバイダ呼び出し層**（`src/llm/`・anthropic/openai の実 HTTP。Deps に注入＝テストは fake）
 - [ ] **`DriveStorage` 実装**（`src/storage/drive.ts` は現状 stub。方針(B)ハイブリッド用）
-- [ ] **AI プロバイダ呼び出し層**（Claude / OpenAI 等のクライアント）
+- [ ] GitHub リポジトリ本体取得（review-repo の深掘り・PAT 使用）
 - [ ] `getAppState` の完成（`aiSettings` 等の束ね込み漏れを解消）
 
 ---
@@ -120,12 +122,12 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 決定（2026-06-10）: **バックエンド完成で一旦区切ってからフロント着手**。フロントは GAS 版の素 HTML を
 踏襲せず**フレームワークに乗せる別フェーズ**として開始する（技術選定はそのフェーズ冒頭で行う）。
 
-### フェーズ1: バックエンド API 完成（← いまここ）
+### フェーズ1: バックエンド API 完成
 1. ✅ **Statuses**（2）→ **Members**（4）
 2. ✅ **Documents 残り**（list / create / delete / PATCH 統合 / bundle / import）
-3. ⬜ **Threads / Comments**（7）＋ **Notifications**（3）＋通知発火（B）
-4. ⬜ **AI Settings**（7）＋暗号化保存（B）→ **AI Review**（5）＋ SSE（B）
-5. ⬜ **バックエンド小物**: `POST /api/setup` ／ folders の rename・delete・link 方針確定（A/B）
+3. ✅ **Threads / Comments**（7）＋ **Notifications**（3）＋通知発火（B）
+4. ✅ **AI Settings**（7）＋暗号化保存（B）→ **AI Review**（5）＋ SSE（B）
+5. ⬜ **バックエンド小物**: `POST /api/setup` ／ folders の rename・delete・link 方針確定（A/B）　← いまここ
    → ここで **API がパリティ到達＝区切り**
 
 ### フェーズ2: インフラ / 移行（フロントと並行可）

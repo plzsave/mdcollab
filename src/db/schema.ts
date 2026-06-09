@@ -124,11 +124,20 @@ export const aiKeys = pgTable(
   "ai_keys",
   {
     email: text("email").notNull(),
+    // API プロバイダのキー(provider="anthropic"等) と GitHub PAT(provider="github:<scope>") を兼ねる
     provider: text("provider").notNull(),
     encryptedKey: text("encrypted_key").notNull(), // 暗号化保存・平文非返却（§6.5）
   },
   (t) => [primaryKey({ columns: [t.email, t.provider] })],
 );
+
+// ユーザーごとの AI 設定（選択中プロバイダ/モデル・GitHub リポジトリ）。秘密は ai_keys 側。
+export const aiSettings = pgTable("ai_settings", {
+  email: text("email").primaryKey(),
+  provider: text("provider"),
+  model: text("model"),
+  githubRepo: text("github_repo"),
+});
 
 // Drive 版履歴の代替（誤上書きの保険・§6.4）
 export const documentVersions = pgTable(

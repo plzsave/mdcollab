@@ -8,6 +8,13 @@
       "when": 1780926127768,
       "tag": "0000_strong_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781018194210,
+      "tag": "0001_gigantic_groot",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,8 @@ import { statusesRoutes } from "./routes/statuses";
 import { membersRoutes } from "./routes/members";
 import { commentsRoutes } from "./routes/comments";
 import { notificationsRoutes } from "./routes/notifications";
+import { aiRoutes } from "./routes/ai";
+import { reviewsRoutes } from "./routes/reviews";
 
 // ランタイム非依存のコア。adapters/* が Deps を組み立ててこれを呼ぶ（§5.1）。
 // Web標準(fetch)だけに依存し、Workers/Node/Lambda で同一に動く。
@@ -27,6 +29,8 @@ export function createApp(deps: Deps) {
   app.route("/api/members", membersRoutes(deps));
   app.route("/api", commentsRoutes(deps));
   app.route("/api/notifications", notificationsRoutes(deps));
+  app.route("/api/ai", aiRoutes(deps));
+  app.route("/api", reviewsRoutes(deps));
 
   return app;
 }

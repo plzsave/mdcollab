@@ -1,6 +1,7 @@
 import { createApp } from "../app";
 import { createDb } from "../db/client";
 import { createStore } from "../storage";
+import { createLlmClient } from "../llm/providers";
 import type { AppConfig } from "../env";
 
 // 個人デプロイ: Cloudflare Workers + Hyperdrive(→Neon) + R2。
@@ -13,6 +14,7 @@ export interface WorkerEnv {
   S3_ACCESS_KEY_ID: string;
   S3_SECRET_ACCESS_KEY: string;
   SESSION_SECRET: string;
+  ENCRYPTION_KEY: string;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   BASE_URL: string;
@@ -33,9 +35,10 @@ export default {
     const config: AppConfig = {
       baseUrl: env.BASE_URL,
       sessionSecret: env.SESSION_SECRET,
+      encryptionKey: env.ENCRYPTION_KEY,
       google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET },
       allowedDomain: env.ALLOWED_DOMAIN,
     };
-    return createApp({ db, store, config }).fetch(request, env, ctx);
+    return createApp({ db, store, llm: createLlmClient(), config }).fetch(request, env, ctx);
   },
 };

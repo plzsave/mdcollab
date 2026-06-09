@@ -72,13 +72,14 @@ S3 互換ストアは **SeaweedFS** を採用（MinIO/LocalStack 不使用・軽
 
 - ✅ ポータブルコア・アダプタ2種（CF/Node）・Drizzle スキーマ・DocumentStore(S3)・OIDC/セッション・
   `requireMember/Owner`・Terraform/CI/scripts 骨組み。
-- ✅ API: `state` / `folders`(GET・POST・文書一覧) / `documents`(全10) / `statuses`(GET・PUT) /
-  `members`(CRUD) / `threads`・`comments`(7) / `notifications`(3) ＋通知発火。
-- ✅ テスト: pglite + メモリストアの結合テスト 48 本（docker 不要・`bun run test`）。
-- ⬜ 残り API（AI settings/review）、`DriveStorage`、AI ストリーミング、
+- ✅ API: `state` / `folders` / `documents`(全10) / `statuses` / `members` / `threads`・`comments`(7) /
+  `notifications`(3) / `ai`(settings・secrets 7) / `reviews`(review・revision 5) ＋通知発火。
+- ✅ 横断: 通知発火・AIキー暗号化保存(AES-GCM)・AIプロバイダ層(anthropic/openai)・SSEストリーミング。
+- ✅ テスト: pglite + メモリストア + fake LLM の結合テスト 60 本（docker 不要・`bun run test`）。
+- ⬜ 残り: 着手順5の小物（`/api/setup`・folder rename/delete/link）、`DriveStorage`、
   データ移行スクリプト、Terraform 実リソース。→ 台帳参照。
 
 ### テスト方針
 `test/helpers/harness.ts` が **pglite（プロセス内 Postgres）に本番マイグレーションを適用** + **メモリ実装の
-DocumentStore** + **本番と同じ署名クッキー**でアプリを起こす。外部サービス無しで本物の Postgres 意味論・
-認可（owner/member）・楽観ロック(409)まで検証できる。
+DocumentStore** + **fake LlmClient** + **本番と同じ署名クッキー**でアプリを起こす。外部サービス無しで本物の
+Postgres 意味論・認可（owner/member）・楽観ロック(409)・通知の宛先・キー暗号化・SSE まで検証できる。
