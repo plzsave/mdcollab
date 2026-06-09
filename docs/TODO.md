@@ -8,7 +8,7 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - 実装済み API: setup / state / folders(全: list/CRUD/文書一覧) / documents(全10) / statuses / members / threads・comments(7) / notifications(3) / ai settings・secrets(7) / ai review・revision(5) ＋認証一式。
 - 横断: 通知発火 / 暗号化保存(AES-GCM) / AI プロバイダ層(anthropic・openai) / SSE ストリーミング。
 - テスト: pglite + メモリストア + fake LLM で結合テスト 66 本。`bun run test`。
-- 次フェーズ: 2(インフラ/移行) ／ 3(フロント・フレームワーク)。
+- 次フェーズ: 2(**インフラ=Cloudflare 優先**・データ移行は不要) ／ 3(フロント・フレームワーク)。
 
 最終更新: 2026-06-09
 
@@ -91,11 +91,12 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 ---
 
 ## C. ランタイム / インフラ / CI
-- [ ] **Cloudflare アダプタの実起動確認**（現状ローカル Node のみ検証済み・Hyperdrive 経由 Neon）
-- [ ] **Lambda アダプタ**（`hono/aws-lambda` で `createApp` を包む）— 未作成
-- [ ] **Terraform 実リソース化**（`infra/envs/mdcollab-{cf-personal,aws-workplace,gcp}` は骨組みのみ）
-- [ ] **CI/CD 実配線**（`scripts/deploy-*.sh` / GitHub Actions は骨組み・職場 CodePipeline 未着手）
-- [ ] **データ移行スクリプト**（GAS / Sheets / Drive → 新スキーマ＋S3 本体）
+**Cloudflare 優先**（AWS は後回し）。**データ移行は不要**（本番は空スタート）。
+- [ ] **Cloudflare 実起動確認**（Workers + Hyperdrive→Neon + R2。現状ローカル Node のみ検証済み）← 次の最初
+- [ ] **Terraform(cf-personal) 実リソース化**（Neon/Hyperdrive/R2/Workers/secrets）
+- [ ] **CI 実配線（GitHub Actions）**（`scripts/deploy-cf.sh` を呼ぶだけ・secrets 注入）
+- [ ] （後回し）**Lambda/Fargate アダプタ** ＋ **Terraform(aws-workplace)** ＋ **CodePipeline**
+- [x] ~~データ移行スクリプト~~ → **不要**（本番空スタート・履歴引き継ぎなし）
 
 ---
 
@@ -131,8 +132,11 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 5. ✅ **バックエンド小物**: `POST /api/setup` ／ folders rename・delete（方針A確定: 全移行。**linkFolder は保留**）
    → **API パリティ到達＝フェーズ1 完了。区切り。**
 
-### フェーズ2: インフラ / 移行（フロントと並行可）
-6. ⬜ **データ移行スクリプト**（C）／**Cloudflare 実起動 → Terraform → CI**（C）
+### フェーズ2: インフラ（Cloudflare 優先・フロントと並行可）
+決定（2026-06-10）: **データ移行は不要**（本番は空スタート・MD は必要時に手動追加・履歴引き継ぎ不要）。
+**インフラは Cloudflare を先に通す**（AWS は後回し）。
+6. ⬜ **Cloudflare 実起動**（Workers + Hyperdrive→Neon + R2）→ **Terraform(cf-personal)** → **CI(GitHub Actions)**
+7. ⬜ （後回し）AWS 一式（RDS/Lambda or Fargate・Terraform aws-workplace・CodePipeline）
 
 ### フェーズ3: フロントエンド（フレームワーク・別フェーズ）
 7. ⬜ 技術選定（SPA フレームワーク等。決めたら導入パッケージ同梱の `skills/SKILL.md` を確認）
