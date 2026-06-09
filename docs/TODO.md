@@ -4,10 +4,11 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 移行計画書 [`md-collab-migration-plan.md`](../../md-collab-migration-plan.md)。
 
 - 凡例: `[x]` 実装済み / `[ ]` 未実装
-- 現状: **着手順4まで完了**（…Threads/Comments/Notifications + AI Settings/Review）。**バックエンドAPIはほぼパリティ到達**（残りは着手順5の小物）。
-- 実装済み API: state / folders / documents(全10) / statuses / members / threads・comments(7) / notifications(3) / **ai settings・secrets(7)** / **ai review・revision(5)** ＋認証一式。
-- 横断: 通知発火 / **暗号化保存(AES-GCM)** / **AI プロバイダ層(anthropic・openai)** / **SSE ストリーミング**。
-- テスト: pglite + メモリストア + fake LLM で結合テスト 60 本。`bun run test`。
+- 現状: **フェーズ1（バックエンド API）完了＝パリティ到達**。方針A(全移行)確定、linkFolder のみ保留（DriveStorage と同時期）。
+- 実装済み API: setup / state / folders(全: list/CRUD/文書一覧) / documents(全10) / statuses / members / threads・comments(7) / notifications(3) / ai settings・secrets(7) / ai review・revision(5) ＋認証一式。
+- 横断: 通知発火 / 暗号化保存(AES-GCM) / AI プロバイダ層(anthropic・openai) / SSE ストリーミング。
+- テスト: pglite + メモリストア + fake LLM で結合テスト 66 本。`bun run test`。
+- 次フェーズ: 2(インフラ/移行) ／ 3(フロント・フレームワーク)。
 
 最終更新: 2026-06-09
 
@@ -17,14 +18,14 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 
 ### 0. App / Setup
 - [x] `GET /api/state`（getAppState）※ `aiSettings` 束ね込みは未対応 → D 参照
-- [ ] `POST /api/setup`（setupDb・初回ストレージ/DB 初期化、owner）
+- [x] `POST /api/setup`（方針A: 初回 members 空なら本人を owner 化＋既定ステータス投入・冪等）
 
 ### 1. Folders
 - [x] `GET /api/folders`（getFolders）
 - [x] `POST /api/folders`（createFolder）
-- [ ] `POST /api/folders/link`（linkFolder・**Drive 固有**。方針(A)では廃止/再設計、(B)で維持）
-- [ ] `PATCH /api/folders/:id`（renameFolder）
-- [ ] `DELETE /api/folders/:id`（deleteFolder）
+- [~] `POST /api/folders/link`（linkFolder・**Drive 固有**。方針A=全移行のため**保留**→DriveStorage と同時期）
+- [x] `PATCH /api/folders/:id`（renameFolder）
+- [x] `DELETE /api/folders/:id`（deleteFolder・中身があれば 409＝文書孤児化防止）
 
 ### 2. Documents
 - [x] `GET /api/documents/:id`（getDocument）
@@ -127,8 +128,8 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 2. ✅ **Documents 残り**（list / create / delete / PATCH 統合 / bundle / import）
 3. ✅ **Threads / Comments**（7）＋ **Notifications**（3）＋通知発火（B）
 4. ✅ **AI Settings**（7）＋暗号化保存（B）→ **AI Review**（5）＋ SSE（B）
-5. ⬜ **バックエンド小物**: `POST /api/setup` ／ folders の rename・delete・link 方針確定（A/B）　← いまここ
-   → ここで **API がパリティ到達＝区切り**
+5. ✅ **バックエンド小物**: `POST /api/setup` ／ folders rename・delete（方針A確定: 全移行。**linkFolder は保留**）
+   → **API パリティ到達＝フェーズ1 完了。区切り。**
 
 ### フェーズ2: インフラ / 移行（フロントと並行可）
 6. ⬜ **データ移行スクリプト**（C）／**Cloudflare 実起動 → Terraform → CI**（C）

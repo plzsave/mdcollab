@@ -72,8 +72,9 @@ S3 互換ストアは **SeaweedFS** を採用（MinIO/LocalStack 不使用・軽
 
 - ✅ ポータブルコア・アダプタ2種（CF/Node）・Drizzle スキーマ・DocumentStore(S3)・OIDC/セッション・
   `requireMember/Owner`・Terraform/CI/scripts 骨組み。
-- ✅ API: `state` / `folders` / `documents`(全10) / `statuses` / `members` / `threads`・`comments`(7) /
-  `notifications`(3) / `ai`(settings・secrets 7) / `reviews`(review・revision 5) ＋通知発火。
+- ✅ API（**バックエンドはパリティ到達**）: `setup` / `state` / `folders`(list/CRUD/文書一覧) / `documents`(全10) /
+  `statuses` / `members` / `threads`・`comments`(7) / `notifications`(3) / `ai`(settings・secrets 7) /
+  `reviews`(review・revision 5) ＋通知発火。linkFolder のみ保留（方針A）。
 - ✅ 横断: 通知発火・AIキー暗号化保存(AES-GCM)・AIプロバイダ層(anthropic/openai)・SSEストリーミング。
 - ✅ テスト: pglite + メモリストア + fake LLM の結合テスト 60 本（docker 不要・`bun run test`）。
 - ⬜ 残り: 着手順5の小物（`/api/setup`・folder rename/delete/link）、`DriveStorage`、
