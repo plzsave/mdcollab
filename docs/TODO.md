@@ -4,8 +4,9 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 移行計画書 [`md-collab-migration-plan.md`](../../md-collab-migration-plan.md)。
 
 - 凡例: `[x]` 実装済み / `[ ]` 未実装
-- 現状: **Phase 0（土台）完了**。ローカル実機で postgres18 + SeaweedFS + 自前セッション + If-Match→409 を確認済み。
-- 実装済みは API 5 エンドポイントのみ（state / folders GET・POST / documents GET・PUT）＋認証一式。
+- 現状: **Phase 0（土台）完了 + Statuses/Members 実装**。ローカル実機で postgres18 + SeaweedFS + 自前セッション + If-Match→409 を確認済み。
+- 実装済み API: state / folders(GET・POST) / documents(GET・PUT) / **statuses(GET・PUT)** / **members(GET・POST・PATCH・DELETE)** ＋認証一式。
+- テスト: pglite + メモリストアで結合テスト 25 本（state/folders/documents/statuses/members）。`bun run test`。
 
 最終更新: 2026-06-09
 
@@ -35,8 +36,8 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - [ ] `PATCH /api/documents/:id`（status / archived / assignee を **1 本に統合**）
 
 ### 3. Statuses
-- [ ] `GET /api/statuses`（getStatuses）
-- [ ] `PUT /api/statuses`（saveStatuses・一括置換、owner）
+- [x] `GET /api/statuses`（getStatuses）
+- [x] `PUT /api/statuses`（saveStatuses・一括置換、owner）
 
 ### 4. Threads / Comments
 - [ ] `GET /api/documents/:id/threads`（getThreadsForDocument）
@@ -48,10 +49,10 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - [ ] `POST /api/threads/:threadId/reopen`
 
 ### 5. Members
-- [ ] `GET /api/members`（getMembers）
-- [ ] `POST /api/members`（addMember、owner）
-- [ ] `PATCH /api/members/:email`（updateMember、owner）
-- [ ] `DELETE /api/members/:email`（removeMember、owner）
+- [x] `GET /api/members`（getMembers）
+- [x] `POST /api/members`（addMember、owner）
+- [x] `PATCH /api/members/:email`（updateMember、owner・role 変更も。最後の owner 降格は拒否）
+- [x] `DELETE /api/members/:email`（removeMember、owner・最後の owner 削除は拒否）
 
 ### 6. Notifications
 - [ ] `GET /api/notifications`（本人宛）
@@ -107,8 +108,9 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 ---
 
 ## E. 品質
-- [ ] テスト拡充（現状 `/health` スモークのみ）
-- [ ] 認可マトリクス（owner / member / 著者）の検証
+- [x] テスト基盤（pglite + メモリストア + 署名クッキーのハーネス・`test/helpers/harness.ts`）
+- [~] テスト拡充（state/folders/documents/statuses/members は済。残りルートは実装と並走で追加）
+- [~] 認可マトリクス（owner / member は statuses/members で検証済。著者・本人宛は未）
 - [ ] エラー形式・入力バリデーションの統一
 
 ---

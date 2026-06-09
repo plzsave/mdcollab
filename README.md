@@ -68,7 +68,16 @@ S3 互換ストアは **SeaweedFS** を採用（MinIO/LocalStack 不使用・軽
 
 ## 実装済み / 未実装
 
+進捗の正は **[docs/TODO.md](docs/TODO.md)**（残タスク台帳）。
+
 - ✅ ポータブルコア・アダプタ2種（CF/Node）・Drizzle スキーマ・DocumentStore(S3)・OIDC/セッション・
-  `requireMember/Owner`・`/health` テスト・Terraform/CI/scripts 骨組み。
-- ⬜ 残り API（threads/comments/members/notifications/AI review…）、`DriveStorage`、AI ストリーミング、
-  データ移行スクリプト、Terraform 実リソース。→ Phase 1 以降。
+  `requireMember/Owner`・Terraform/CI/scripts 骨組み。
+- ✅ API: `state` / `folders`(GET・POST) / `documents`(GET・PUT) / `statuses`(GET・PUT) / `members`(CRUD)。
+- ✅ テスト: pglite + メモリストアの結合テスト（docker 不要・`bun run test`）。
+- ⬜ 残り API（documents 残り・threads/comments・notifications・AI settings/review…）、`DriveStorage`、
+  AI ストリーミング、データ移行スクリプト、Terraform 実リソース。→ 台帳参照。
+
+### テスト方針
+`test/helpers/harness.ts` が **pglite（プロセス内 Postgres）に本番マイグレーションを適用** + **メモリ実装の
+DocumentStore** + **本番と同じ署名クッキー**でアプリを起こす。外部サービス無しで本物の Postgres 意味論・
+認可（owner/member）・楽観ロック(409)まで検証できる。
