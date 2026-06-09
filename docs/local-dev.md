@@ -85,6 +85,38 @@ curl -s -b cookie.txt -X PUT localhost:8787/api/documents/seed-doc \
   ブラウザで `http://localhost:8888/buckets/mdcollab-docs-dev/docs/seed-doc/` を開いてもよい。
   （そもそも GET /api/documents が本文を返せている時点で S3 から読めている証拠なので、この確認は任意）
 
+### 7. Statuses / Members（owner 専用操作の確認）
+
+seed したメンバー（`SEED_EMAIL`）は **owner** なので、owner 限定の書き込みも試せる。
+
+```bash
+# ステータス: 一括置換(owner) → GET で反映確認
+curl -s -b cookie.txt -X PUT localhost:8787/api/statuses \
+  -H 'Content-Type: application/json' \
+  -d '[{"label":"Draft","sortOrder":0},{"label":"Review","sortOrder":1},{"label":"Done","sortOrder":2}]' | jq
+curl -s -b cookie.txt localhost:8787/api/statuses | jq '[.[].label]'   # ["Draft","Review","Done"]
+
+# メンバー: 追加(owner) → 一覧 → 改名(PATCH) → 削除(DELETE)
+curl -s -b cookie.txt -X POST localhost:8787/api/members \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"teammate@example.com","displayName":"Teammate"}' | jq
+curl -s -b cookie.txt localhost:8787/api/members | jq '[.[].email]'
+curl -s -b cookie.txt -X PATCH localhost:8787/api/members/teammate@example.com \
+  -H 'Content-Type: application/json' -d '{"displayName":"改名後"}' | jq
+curl -s -b cookie.txt -X DELETE localhost:8787/api/members/teammate@example.com | jq
+
+# 締め出し防止: 最後の owner(自分) は降格/削除できない → 400
+curl -s -b cookie.txt -X DELETE "localhost:8787/api/members/$SEED_EMAIL" -w '\nHTTP %{http_code}\n'
+```
+
+期待結果:
+- statuses PUT が `sortOrder` 順で返り、GET にも反映される。
+- members の add→list→patch→delete が一通り動く。
+- 最後の owner の DELETE が `400`（`cannot remove the last owner`）。
+
+> 単体テスト（`bun run test`）は docker 不要で同じロジックを検証する（pglite + メモリストア）。
+> ここでの curl は「実プロセス＋実 Postgres でも動く」最終確認。
+
 ### 片付け
 
 ```bash
