@@ -11,9 +11,31 @@ import { createSession } from "../../src/auth/session";
 import { SESSION_COOKIE } from "../../src/auth/middleware";
 import type { Database } from "../../src/db/client";
 import type { DocumentStore } from "../../src/storage/types";
+import type { LlmClient, LlmInput } from "../../src/llm/types";
 import type { AppConfig, Deps } from "../../src/env";
 
 const TEST_SECRET = "test-secret";
+
+/** ネットワーク不要の fake LlmClient。最後の入力を記録し、固定テキストを返す/流す。 */
+export function makeFakeLlm(): LlmClient & { calls: LlmInput[] } {
+  const calls: LlmInput[] = [];
+  return {
+    calls,
+    async complete(input) {
+      calls.push(input);
+      return `REVIEW(${input.provider}/${input.model}): ${input.prompt.slice(0, 20)}`;
+    },
+    async *stream(input) {
+      calls.push(input);
+      yield "REVIEW ";
+      yield "chunk-1 ";
+      yield "chunk-2";
+    },
+    async listModels(provider) {
+      return [`${provider}-model-a`, `${provider}-model-b`];
+    },
+  };
+}
 
 /** pglite に本番マイグレーションを適用した drizzle インスタンスを返す。
  *  pglite 版と postgres-js 版は型が別だが、使うクエリビルダ API は同一で実行時挙動も同じ。
@@ -48,6 +70,7 @@ export function makeMemoryStore(): DocumentStore & { dump(): Map<string, string>
 export interface Harness {
   db: Database;
   store: ReturnType<typeof makeMemoryStore>;
+  llm: ReturnType<typeof makeFakeLlm>;
   config: AppConfig;
   app: ReturnType<typeof createApp>;
   /** email 用の Cookie ヘッダ値（"mdcollab_session=..."）を発行 */
@@ -59,12 +82,14 @@ export interface Harness {
 export async function makeHarness(): Promise<Harness> {
   const db = await makeTestDb();
   const store = makeMemoryStore();
+  const llm = makeFakeLlm();
   const config: AppConfig = {
     baseUrl: "http://localhost",
     sessionSecret: TEST_SECRET,
+    encryptionKey: "test-encryption-key",
     google: { clientId: "x", clientSecret: "x" },
   };
-  const deps: Deps = { db, store, config };
+  const deps: Deps = { db, store, llm, config };
   const app = createApp(deps);
 
   async function cookie(email: string, name?: string) {
@@ -80,7 +105,7 @@ export async function makeHarness(): Promise<Harness> {
     return app.request(path, { ...rest, headers: h });
   }
 
-  return { db, store, config, app, cookie, req };
+  return { db, store, llm, config, app, cookie, req };
 }
 
 /** members に1行入れるショートカット。テストの前提作りに使う。 */

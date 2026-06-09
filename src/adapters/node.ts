@@ -2,6 +2,7 @@ import { serve } from "@hono/node-server";
 import { createApp } from "../app";
 import { createDb } from "../db/client";
 import { createStore } from "../storage";
+import { createLlmClient } from "../llm/providers";
 import type { AppConfig } from "../env";
 
 // ローカル開発 / 職場 AWS(Fargate/App Runner)用 Node エントリ。
@@ -30,6 +31,8 @@ const devAuth = process.env.DEV_AUTH === "1";
 const config: AppConfig = {
   baseUrl: process.env.BASE_URL ?? "http://localhost:8787",
   sessionSecret: required("SESSION_SECRET"),
+  // 暗号化鍵。未設定ならセッション鍵から派生（dev 用フォールバック）。本番は ENCRYPTION_KEY を設定。
+  encryptionKey: process.env.ENCRYPTION_KEY ?? `${required("SESSION_SECRET")}:enc`,
   google: {
     clientId: devAuth ? (process.env.GOOGLE_CLIENT_ID ?? "") : required("GOOGLE_CLIENT_ID"),
     clientSecret: devAuth ? (process.env.GOOGLE_CLIENT_SECRET ?? "") : required("GOOGLE_CLIENT_SECRET"),
@@ -38,7 +41,7 @@ const config: AppConfig = {
   devAuth,
 };
 
-const app = createApp({ db, store, config });
+const app = createApp({ db, store, llm: createLlmClient(), config });
 const port = Number(process.env.PORT ?? 8787);
 serve({ fetch: app.fetch, port });
 // eslint-disable-next-line no-console

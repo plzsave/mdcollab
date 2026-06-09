@@ -7,9 +7,11 @@ import type { Deps } from "../src/env";
 const deps = {
   db: {} as Deps["db"],
   store: {} as Deps["store"],
+  llm: {} as Deps["llm"],
   config: {
     baseUrl: "http://localhost",
     sessionSecret: "test-secret",
+    encryptionKey: "test-encryption-key",
     google: { clientId: "x", clientSecret: "x" },
   },
 } satisfies Deps;

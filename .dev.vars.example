@@ -15,6 +15,8 @@ S3_SECRET_ACCESS_KEY=test
 
 # --- 認証 ---
 SESSION_SECRET=local-dev-secret-change-me
+# AIキー/PATの保存時暗号化(§6.5)。未設定なら dev は SESSION_SECRET から派生。本番は必ず別途設定。
+ENCRYPTION_KEY=local-dev-encryption-key-change-me
 # ⚠ ローカル検証用の抜け道。Google OAuth 無しでログインできる。本番では必ず外す。
 DEV_AUTH=1
 # 本物の Google OIDC を試すとき（任意・docs/google-oauth-setup.md）:
