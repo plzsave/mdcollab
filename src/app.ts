@@ -7,6 +7,8 @@ import { foldersRoutes } from "./routes/folders";
 import { documentsRoutes } from "./routes/documents";
 import { statusesRoutes } from "./routes/statuses";
 import { membersRoutes } from "./routes/members";
+import { commentsRoutes } from "./routes/comments";
+import { notificationsRoutes } from "./routes/notifications";
 
 // ランタイム非依存のコア。adapters/* が Deps を組み立ててこれを呼ぶ（§5.1）。
 // Web標準(fetch)だけに依存し、Workers/Node/Lambda で同一に動く。
@@ -23,6 +25,8 @@ export function createApp(deps: Deps) {
   app.route("/api/documents", documentsRoutes(deps));
   app.route("/api/statuses", statusesRoutes(deps));
   app.route("/api/members", membersRoutes(deps));
+  app.route("/api", commentsRoutes(deps));
+  app.route("/api/notifications", notificationsRoutes(deps));
 
   return app;
 }

@@ -4,9 +4,9 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 移行計画書 [`md-collab-migration-plan.md`](../../md-collab-migration-plan.md)。
 
 - 凡例: `[x]` 実装済み / `[ ]` 未実装
-- 現状: **Phase 0（土台）完了 + Statuses/Members/Documents 実装**。ローカル実機で postgres18 + SeaweedFS + 自前セッション + If-Match→409 を確認済み。
-- 実装済み API: state / **folders(GET・POST・文書一覧)** / **documents(全10: GET/PUT/POST/PATCH/DELETE/import/bundle)** / **statuses(GET・PUT)** / **members(GET・POST・PATCH・DELETE)** ＋認証一式。
-- テスト: pglite + メモリストアで結合テスト 37 本（state/folders/documents/statuses/members）。`bun run test`。
+- 現状: **着手順3まで完了**（Statuses/Members/Documents/Threads・Comments/Notifications/通知発火）。ローカル実機で postgres18 + SeaweedFS + 自前セッション + If-Match→409 を確認済み。
+- 実装済み API: state / folders(GET・POST・文書一覧) / documents(全10) / statuses(GET・PUT) / members(CRUD) / **threads・comments(7)** / **notifications(3)** ＋認証一式。
+- テスト: pglite + メモリストアで結合テスト 48 本。`bun run test`。
 
 最終更新: 2026-06-09
 
@@ -40,13 +40,13 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - [x] `PUT /api/statuses`（saveStatuses・一括置換、owner）
 
 ### 4. Threads / Comments
-- [ ] `GET /api/documents/:id/threads`（getThreadsForDocument）
-- [ ] `POST /api/documents/:id/threads`（createThread＋mention 通知発火）
-- [ ] `POST /api/threads/:threadId/comments`（addReply＋reply 通知発火）
-- [ ] `PATCH /api/comments/:commentId`（editComment・著者のみ）
-- [ ] `DELETE /api/comments/:commentId`（論理削除・著者のみ）
-- [ ] `POST /api/threads/:threadId/resolve`（＋resolve 通知発火）
-- [ ] `POST /api/threads/:threadId/reopen`
+- [x] `GET /api/documents/:id/threads`（getThreadsForDocument・非削除コメント同梱）
+- [x] `POST /api/documents/:id/threads`（createThread＋mention 通知発火）
+- [x] `POST /api/threads/:threadId/comments`（addReply＋reply/mention 通知発火）
+- [x] `PATCH /api/comments/:commentId`（editComment・著者のみ）
+- [x] `DELETE /api/comments/:commentId`（論理削除・著者のみ）
+- [x] `POST /api/threads/:threadId/resolve`（＋resolve 通知発火）
+- [x] `POST /api/threads/:threadId/reopen`
 
 ### 5. Members
 - [x] `GET /api/members`（getMembers）
@@ -55,9 +55,9 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - [x] `DELETE /api/members/:email`（removeMember、owner・最後の owner 削除は拒否）
 
 ### 6. Notifications
-- [ ] `GET /api/notifications`（本人宛）
-- [ ] `POST /api/notifications/:id/read`
-- [ ] `POST /api/notifications/read-all`
+- [x] `GET /api/notifications`（本人宛・新しい順）
+- [x] `POST /api/notifications/:id/read`（本人宛のみ・他人のは 404）
+- [x] `POST /api/notifications/read-all`
 
 ### 7. AI Settings / Secrets
 - [ ] `GET /api/ai/settings`（**キー平文を返さない**・has-key 真偽のみ）
@@ -79,7 +79,7 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 
 ## B. 横断機能（API と並走）
 - [ ] AI キー / GitHub PAT の**暗号化保存**（§6.5）— 平文返却しない不変条件の実体
-- [ ] 通知の**副作用発火**（mention / reply / resolve でレコード生成）
+- [x] 通知の**副作用発火**（mention / reply / resolve）— `src/notify.ts` に集約。メンバーのみ通知・actor 除外・mention と reply は二重にしない
 - [ ] AI レビューの **SSE ストリーミング**（Workers の CPU 制約 vs Lambda 15分の差を吸収・§8）
 - [ ] **`DriveStorage` 実装**（`src/storage/drive.ts` は現状 stub。方針(B)ハイブリッド用）
 - [ ] **AI プロバイダ呼び出し層**（Claude / OpenAI 等のクライアント）
