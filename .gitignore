@@ -5,6 +5,8 @@ dist/
 .env.*
 *.local
 .wrangler/
+# ローカル検証で curl が作るセッション Cookie の残骸
+cookie.txt
 # Terraform
 .terraform/
 *.tfstate

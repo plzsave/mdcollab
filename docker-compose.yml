@@ -3,7 +3,8 @@
 #   起動: make up   / 停止: make down
 services:
   postgres:
-    image: postgres:17
+    image: postgres:18
+    restart: unless-stopped   # reboot 後も自動で立ち上がる（手動 stop した時だけ止まったまま）
     environment:
       POSTGRES_USER: mdcollab
       POSTGRES_PASSWORD: mdcollab
@@ -11,7 +12,9 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # PostgreSQL 18+ は /var/lib/postgresql 直下(メジャー別サブディレクトリ)にデータを置く規約。
+      # 旧来の /var/lib/postgresql/data にマウントすると 18 は起動を拒否する。
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mdcollab -d mdcollab"]
       interval: 3s
@@ -23,6 +26,7 @@ services:
   # S3 gateway:8333 / filer browser:8888（デバッグ用）。
   s3:
     image: chrislusf/seaweedfs:latest
+    restart: unless-stopped   # reboot 後も自動で立ち上がる
     command: server -s3 -dir=/data -s3.config=/etc/seaweedfs/s3.json
     ports:
       - "8333:8333" # S3 API（アプリ/seed が使う）
