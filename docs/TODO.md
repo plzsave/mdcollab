@@ -4,9 +4,9 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 移行計画書 [`md-collab-migration-plan.md`](../../md-collab-migration-plan.md)。
 
 - 凡例: `[x]` 実装済み / `[ ]` 未実装
-- 現状: **Phase 0（土台）完了 + Statuses/Members 実装**。ローカル実機で postgres18 + SeaweedFS + 自前セッション + If-Match→409 を確認済み。
-- 実装済み API: state / folders(GET・POST) / documents(GET・PUT) / **statuses(GET・PUT)** / **members(GET・POST・PATCH・DELETE)** ＋認証一式。
-- テスト: pglite + メモリストアで結合テスト 25 本（state/folders/documents/statuses/members）。`bun run test`。
+- 現状: **Phase 0（土台）完了 + Statuses/Members/Documents 実装**。ローカル実機で postgres18 + SeaweedFS + 自前セッション + If-Match→409 を確認済み。
+- 実装済み API: state / **folders(GET・POST・文書一覧)** / **documents(全10: GET/PUT/POST/PATCH/DELETE/import/bundle)** / **statuses(GET・PUT)** / **members(GET・POST・PATCH・DELETE)** ＋認証一式。
+- テスト: pglite + メモリストアで結合テスト 37 本（state/folders/documents/statuses/members）。`bun run test`。
 
 最終更新: 2026-06-09
 
@@ -28,12 +28,12 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 ### 2. Documents
 - [x] `GET /api/documents/:id`（getDocument）
 - [x] `PUT /api/documents/:id`（updateDocument・If-Match→409）
-- [ ] `GET /api/folders/:folderId/documents`（getDocumentList）
-- [ ] `GET /api/documents/:id?include=threads,revision`（getDocumentBundle・往復削減）
-- [ ] `POST /api/documents`（createDocument）
-- [ ] `POST /api/documents/import`（importDocuments・複数ファイル、上限 MAX_IMPORT_FILES）
-- [ ] `DELETE /api/documents/:id`（deleteDocument）
-- [ ] `PATCH /api/documents/:id`（status / archived / assignee を **1 本に統合**）
+- [x] `GET /api/folders/:folderId/documents`（getDocumentList・本文なしの軽量メタ一覧）
+- [x] `GET /api/documents/:id?include=threads,revision`（getDocumentBundle・往復削減）
+- [x] `POST /api/documents`（createDocument・folderId 検証あり）
+- [x] `POST /api/documents/import`（importDocuments・複数ファイル、上限 MAX_IMPORT_FILES=50）
+- [x] `DELETE /api/documents/:id`（deleteDocument・子レコード＋本体ストアも掃除）
+- [x] `PATCH /api/documents/:id`（status / archived / assignee / title を **1 本に統合**）
 
 ### 3. Statuses
 - [x] `GET /api/statuses`（getStatuses）
