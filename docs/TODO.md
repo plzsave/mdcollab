@@ -115,10 +115,23 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 
 ---
 
-## 着手順の素案（依存の少ない順に縦に通す）
-1. **Statuses**（2）→ **Members**（4）：単純 CRUD で認可（owner）パターンを固める
-2. **Documents 残り**（list / create / delete / PATCH 統合 / bundle）
-3. **Threads / Comments**（7）＋ **Notifications**（3）＋通知発火（B）
-4. **AI Settings**（7）＋暗号化保存（B）→ **AI Review**（5）＋ SSE（B）
-5. **フロント最小版**（D）でブラウザ操作可能に
-6. **Cloudflare 実起動 → Terraform → CI**（C）／**データ移行**（C）
+## 着手順（方針: バックエンド API を完成させてから区切り、その後フロントへ）
+
+決定（2026-06-10）: **バックエンド完成で一旦区切ってからフロント着手**。フロントは GAS 版の素 HTML を
+踏襲せず**フレームワークに乗せる別フェーズ**として開始する（技術選定はそのフェーズ冒頭で行う）。
+
+### フェーズ1: バックエンド API 完成（← いまここ）
+1. ✅ **Statuses**（2）→ **Members**（4）
+2. ✅ **Documents 残り**（list / create / delete / PATCH 統合 / bundle / import）
+3. ⬜ **Threads / Comments**（7）＋ **Notifications**（3）＋通知発火（B）
+4. ⬜ **AI Settings**（7）＋暗号化保存（B）→ **AI Review**（5）＋ SSE（B）
+5. ⬜ **バックエンド小物**: `POST /api/setup` ／ folders の rename・delete・link 方針確定（A/B）
+   → ここで **API がパリティ到達＝区切り**
+
+### フェーズ2: インフラ / 移行（フロントと並行可）
+6. ⬜ **データ移行スクリプト**（C）／**Cloudflare 実起動 → Terraform → CI**（C）
+
+### フェーズ3: フロントエンド（フレームワーク・別フェーズ）
+7. ⬜ 技術選定（SPA フレームワーク等。決めたら導入パッケージ同梱の `skills/SKILL.md` を確認）
+8. ⬜ GAS 版パリティの全画面（D）: 文書一覧/フォルダ・エディタ(409体験)・コメントスレッド・
+   ステータスボード・AI レビュー/改稿・通知・メンバー管理・取込/出力
