@@ -92,9 +92,11 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 
 ## C. ランタイム / インフラ / CI
 **Cloudflare 優先**（AWS は後回し）。**データ移行は不要**（本番は空スタート）。
-方針: **軽い入り方**（wrangler 手動デプロイで本番 `/health` を通す）→ 後で `terraform import` で一括管理へ。
-- [~] **Cloudflare 実起動確認**（Workers + Hyperdrive→Neon + R2）← **次**。手順書 [`docs/cloudflare-deploy.md`](cloudflare-deploy.md)。`wrangler.toml` 仕上げ済み。**残り=ユーザーの credential 投入＋ `wrangler deploy`**
-- [ ] **Terraform(cf-personal) 実リソース化**（手動で作った R2/Hyperdrive を import → Workers も IaC 管理へ）
+方針: **軽い入り方**（wrangler 手動デプロイで本番起動）→ 後で `terraform import` で一括管理へ。
+- [x] **Cloudflare 実起動完了**（2026-06-10）。`https://mdcollab-api.yskab-dev.workers.dev`。
+  Workers + Hyperdrive→Neon + R2 + 自前 Google OAuth + setup(owner化) + 文書 R2 往復まで本番疎通確認済み。
+  手順書 [`docs/cloudflare-deploy.md`](cloudflare-deploy.md)。secrets は `wrangler secret`（SESSION/ENCRYPTION/S3×2/GOOGLE×2）。
+- [ ] **Terraform(cf-personal) 実リソース化**（手動で作った R2/Hyperdrive を import → Workers も IaC 管理へ・後回し可）
 - [ ] **CI 実配線（GitHub Actions）**（`scripts/deploy-cf.sh` を呼ぶだけ・secrets 注入）
 - [ ] （後回し）**Lambda/Fargate アダプタ** ＋ **Terraform(aws-workplace)** ＋ **CodePipeline**
 - [x] ~~データ移行スクリプト~~ → **不要**（本番空スタート・履歴引き継ぎなし）
