@@ -1,20 +1,26 @@
 name = "mdcollab-api"
 main = "src/adapters/cloudflare.ts"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-06-01"
 # postgres.js を Workers で動かすため必須
 compatibility_flags = ["nodejs_compat"]
 
-# Hyperdrive(→Neon) は Phase 0 で作成して id を設定する。
-# [[hyperdrive]]
-# binding = "HYPERDRIVE"
-# id = "<terraform 出力の hyperdrive id>"
+# Hyperdrive(→Neon)。手順:
+#   1) Neon の接続文字列を用意
+#   2) wrangler hyperdrive create mdcollab-neon --connection-string="postgres://..."
+#   3) 出力された id を下の <HYPERDRIVE_ID> に貼る
+# 手動デプロイ(軽い入り方)ではこの id を手で入れる。後で Terraform 管理に import 可能。
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "<HYPERDRIVE_ID>"
 
 # 非秘密の設定は [vars]、秘密は `wrangler secret put` で投入（リポジトリに置かない）。
 [vars]
 S3_REGION = "auto"
-BASE_URL = "https://mdcollab.example.workers.dev"
+BASE_URL = "https://mdcollab-api.<your-subdomain>.workers.dev"
 # ALLOWED_DOMAIN = "your-workspace-domain.com"
 
-# secrets（wrangler secret put で投入）:
-#   SESSION_SECRET / GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
+# secrets（`wrangler secret put <NAME>` で投入。リポジトリには置かない）:
+#   SESSION_SECRET / ENCRYPTION_KEY
+#   GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
 #   S3_ENDPOINT / S3_BUCKET / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY
+# ※ ENCRYPTION_KEY は一度決めたら変更しないこと（既存 AI キーの復号が不能になる）。
