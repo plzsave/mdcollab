@@ -108,8 +108,8 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 データ層は Query 主役・Router はナビゲーション専念。認証は `/api/state` の 200/401/403 でゲート。
 - [x] 足場一式（vite/tsconfig/router/query/api クライアント・型）＋ ビルド通過（コード分割確認）
 - [x] 認証ゲート（未ログイン→Google・非メンバー→初回 setup）＋ アプリシェル（サイドバー: フォルダ）
-- [x] フォルダ内 文書一覧 → 文書表示（read-only）
-- [ ] **markdown エディタ画面**（編集・保存・If-Match→409 体験・プレビュー）
+- [x] フォルダ内 文書一覧 → 文書表示
+- [x] **markdown エディタ**（編集/分割/プレビュー・保存・If-Match→409 衝突UI[上書き/最新読込]）。marked+dompurify でサニタイズ描画
 - [ ] コメントスレッド UI
 - [ ] ステータス / 担当ボード
 - [ ] AI レビュー画面（SSE ストリーミング表示）

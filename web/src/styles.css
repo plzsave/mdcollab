@@ -1,1 +1,86 @@
 @import "tailwindcss";
+
+/* Markdown プレビューの最小スタイル（Tailwind typography 非依存・手書き） */
+.md-preview {
+  color: #334155;
+  line-height: 1.7;
+  font-size: 0.925rem;
+}
+.md-preview h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 1.2rem 0 0.6rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.3rem;
+}
+.md-preview h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 1.1rem 0 0.5rem;
+}
+.md-preview h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1rem 0 0.4rem;
+}
+.md-preview p {
+  margin: 0.6rem 0;
+}
+.md-preview ul,
+.md-preview ol {
+  margin: 0.6rem 0;
+  padding-left: 1.5rem;
+}
+.md-preview ul {
+  list-style: disc;
+}
+.md-preview ol {
+  list-style: decimal;
+}
+.md-preview li {
+  margin: 0.2rem 0;
+}
+.md-preview a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+.md-preview code {
+  background: #f1f5f9;
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.85em;
+  font-family: ui-monospace, monospace;
+}
+.md-preview pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0.8rem 0;
+}
+.md-preview pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+.md-preview blockquote {
+  border-left: 3px solid #cbd5e1;
+  padding-left: 1rem;
+  color: #64748b;
+  margin: 0.8rem 0;
+}
+.md-preview table {
+  border-collapse: collapse;
+  margin: 0.8rem 0;
+}
+.md-preview th,
+.md-preview td {
+  border: 1px solid #e2e8f0;
+  padding: 0.4rem 0.7rem;
+}
+.md-preview hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 1.2rem 0;
+}

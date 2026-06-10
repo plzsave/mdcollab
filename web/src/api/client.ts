@@ -1,9 +1,11 @@
 // API レスポンスのエラー形式（バックエンドは { error: { code, message } } で統一）。
+// data には生のレスポンスボディを保持（例: 409 の { current: version }）。
 export class ApiError extends Error {
   constructor(
     public status: number,
     public code: string,
     message: string,
+    public data?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -19,14 +21,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     let code = "ERROR";
     let message = res.statusText;
+    let data: unknown;
     try {
       const body = (await res.json()) as { error?: { code?: string; message?: string } };
+      data = body;
       code = body.error?.code ?? code;
       message = body.error?.message ?? message;
     } catch {
       // JSON でないレスポンスはそのまま statusText を使う
     }
-    throw new ApiError(res.status, code, message);
+    throw new ApiError(res.status, code, message, data);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
