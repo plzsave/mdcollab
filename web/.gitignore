@@ -1,0 +1,4 @@
+node_modules
+dist
+# router-plugin が生成（ビルド/dev 時に再生成される）
+src/routeTree.gen.ts

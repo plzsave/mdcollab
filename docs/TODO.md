@@ -103,14 +103,18 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 
 ---
 
-## D. フロントエンド（現状ゼロ）
-- [ ] **SPA 一式**（`doGet` の HTML 置換）
-  - [ ] markdown エディタ画面（表示・編集・If-Match→409 体験）
-  - [ ] コメントスレッド UI
-  - [ ] ステータス / 担当ボード
-  - [ ] AI レビュー画面（ストリーミング表示）
-  - [ ] 通知 UI
-- [ ] 静的配信（Workers Assets / CloudFront+S3）
+## D. フロントエンド（フェーズ3・進行中）
+スタック確定: **React 19 + Vite + TanStack Router(SPA, file-based) + TanStack Query + Tailwind v4**（`web/`）。
+データ層は Query 主役・Router はナビゲーション専念。認証は `/api/state` の 200/401/403 でゲート。
+- [x] 足場一式（vite/tsconfig/router/query/api クライアント・型）＋ ビルド通過（コード分割確認）
+- [x] 認証ゲート（未ログイン→Google・非メンバー→初回 setup）＋ アプリシェル（サイドバー: フォルダ）
+- [x] フォルダ内 文書一覧 → 文書表示（read-only）
+- [ ] **markdown エディタ画面**（編集・保存・If-Match→409 体験・プレビュー）
+- [ ] コメントスレッド UI
+- [ ] ステータス / 担当ボード
+- [ ] AI レビュー画面（SSE ストリーミング表示）
+- [ ] 通知 UI ／ メンバー管理 ／ フォルダ・文書の作成/取込/出力 ／ AI 設定画面
+- [ ] 静的配信を本番 Worker に結線（`[assets]` + SPA フォールバック・`/api/*` は Worker 優先）
 
 ---
 
