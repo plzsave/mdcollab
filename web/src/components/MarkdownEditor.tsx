@@ -7,6 +7,7 @@ import { renderMarkdown } from "../lib/markdown";
 import { applyHighlights } from "../lib/highlight";
 import { CommentPanel, type DraftAnchor } from "./CommentPanel";
 import { AiReviewPanel } from "./AiReviewPanel";
+import { IconChat } from "./icons";
 import type { DocumentFull } from "../api/types";
 
 type Mode = "edit" | "split" | "preview";
@@ -211,7 +212,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
               className={`rounded-md border px-3 py-1.5 text-sm transition ${
                 showComments
                   ? "border-sky-300 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300"
-                  : "border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:text-slate-200"
+                  : "border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
               }`}
             >
               コメント{threads && threads.length > 0 ? `（${threads.length}）` : ""}
@@ -221,7 +222,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
               className={`rounded-md border px-3 py-1.5 text-sm transition ${
                 showReview
                   ? "border-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
-                  : "border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:text-slate-200"
+                  : "border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
               }`}
             >
               AI レビュー
@@ -236,7 +237,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
             <button
               onClick={exportMd}
               title="Markdown をダウンロード"
-              className="rounded-md border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-500 hover:border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:text-slate-200"
+              className="rounded-md border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-500 hover:border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
             >
               エクスポート
             </button>
@@ -306,10 +307,10 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
         <button
           onMouseDown={(e) => e.preventDefault()} // 選択を保持したままクリック
           onClick={startThreadFromSelection}
-          className="comment-bubble rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white shadow-lg hover:bg-slate-700"
+          className="comment-bubble flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white shadow-lg hover:bg-slate-700"
           style={{ left: bubble.x, top: bubble.y }}
         >
-          💬 コメント
+          <IconChat width={14} height={14} /> コメント
         </button>
       )}
 

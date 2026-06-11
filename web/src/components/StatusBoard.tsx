@@ -88,7 +88,7 @@ function BoardCard({
       <Link
         to="/documents/$documentId"
         params={{ documentId: doc.id }}
-        className="block text-sm font-medium text-slate-800 dark:text-slate-100 hover:text-slate-600 dark:text-slate-300"
+        className="block text-sm font-medium text-slate-800 dark:text-slate-100 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-300"
       >
         {doc.title}
       </Link>
@@ -132,7 +132,7 @@ function BoardCard({
         <button
           onClick={() => onChange({ archived: !doc.archived })}
           disabled={pending}
-          className="text-[10px] text-slate-400 hover:text-slate-700 dark:text-slate-200"
+          className="text-[10px] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
         >
           {doc.archived ? "復元" : "アーカイブ"}
         </button>

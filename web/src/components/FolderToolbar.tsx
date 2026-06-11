@@ -84,7 +84,7 @@ export function FolderToolbar({
               }}
               className="rounded border border-slate-300 dark:border-slate-600 px-2 py-1 text-xl font-bold text-slate-800 dark:text-slate-100 focus:border-slate-400 focus:outline-none"
             />
-            <button onClick={submitRename} className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-100">
+            <button onClick={submitRename} className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 dark:text-slate-100">
               保存
             </button>
             <button
@@ -92,7 +92,7 @@ export function FolderToolbar({
                 setNameDraft(folderName);
                 setEditingName(false);
               }}
-              className="text-xs text-slate-400 hover:text-slate-700 dark:text-slate-200"
+              className="text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
             >
               取消
             </button>
@@ -105,7 +105,7 @@ export function FolderToolbar({
                 setNameDraft(folderName);
                 setEditingName(true);
               }}
-              className="text-xs text-slate-400 hover:text-slate-700 dark:text-slate-200"
+              className="text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
             >
               名前変更
             </button>
@@ -135,7 +135,7 @@ export function FolderToolbar({
         <button
           onClick={() => fileRef.current?.click()}
           disabled={importDocs.isPending}
-          className="rounded-md border border-slate-300 dark:border-slate-600 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:border-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-800 dark:text-slate-100 disabled:opacity-40"
+          className="rounded-md border border-slate-300 dark:border-slate-600 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:border-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-slate-100 dark:text-slate-100 disabled:opacity-40"
         >
           {importDocs.isPending ? "取込中…" : "インポート"}
         </button>

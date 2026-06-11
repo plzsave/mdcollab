@@ -115,7 +115,7 @@ function AiSettingsView() {
             onClick={() => setWantModels(true)}
             disabled={!hasKey}
             title={!hasKey ? "先にキーを保存してください" : ""}
-            className="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-100 disabled:opacity-40"
+            className="text-[11px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 dark:text-slate-100 disabled:opacity-40"
           >
             候補を取得
           </button>

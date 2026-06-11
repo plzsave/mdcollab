@@ -38,7 +38,7 @@ export function NotMemberScreen() {
 
         <button
           onClick={() => logout.mutate()}
-          className="mt-3 block w-full text-center text-xs text-slate-400 hover:text-slate-600 dark:text-slate-300"
+          className="mt-3 block w-full text-center text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-300"
         >
           別のアカウントでログインし直す
         </button>

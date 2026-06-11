@@ -58,7 +58,7 @@ export function CommentPanel({
             <span className="ml-2 text-xs font-normal text-slate-400">未解決 {openCount}</span>
           )}
         </h2>
-        <button onClick={onClose} className="text-xs text-slate-400 hover:text-slate-700 dark:text-slate-200">
+        <button onClick={onClose} className="text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200">
           閉じる
         </button>
       </div>
@@ -353,7 +353,7 @@ function CommentItem({
                 setDraft(comment.content);
                 setEditing(false);
               }}
-              className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-200"
+              className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
             >
               取消
             </button>
@@ -371,7 +371,7 @@ function CommentItem({
           <p className="whitespace-pre-wrap break-words text-slate-700 dark:text-slate-200">{comment.content}</p>
           {canEdit && (
             <div className="mt-1 flex gap-2 text-[11px] text-slate-400">
-              <button onClick={() => setEditing(true)} className="hover:text-slate-700 dark:text-slate-200">
+              <button onClick={() => setEditing(true)} className="hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200">
                 編集
               </button>
               <button
@@ -413,7 +413,7 @@ function MentionPicker({
     <div className="mt-1">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="text-[11px] text-slate-500 hover:text-slate-700 dark:text-slate-200"
+        className="text-[11px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
       >
         @ メンション{value.length > 0 ? `（${value.length}）` : ""}
       </button>

@@ -103,7 +103,7 @@ function NotificationItem({ note }: { note: Notification }) {
       {!note.isRead && (
         <button
           onClick={() => markRead.mutate(note.id)}
-          className="mt-1 text-[11px] text-slate-400 hover:text-slate-700 dark:text-slate-200"
+          className="mt-1 text-[11px] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
         >
           既読にする
         </button>
