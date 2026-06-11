@@ -135,7 +135,7 @@ export function FolderToolbar({
         <button
           onClick={() => fileRef.current?.click()}
           disabled={importDocs.isPending}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:border-slate-400 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40"
         >
           {importDocs.isPending ? "取込中…" : "インポート"}
         </button>

@@ -211,7 +211,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
               className={`rounded-md border px-3 py-1.5 text-sm transition ${
                 showComments
                   ? "border-sky-300 bg-sky-50 text-sky-700"
-                  : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                  : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700"
               }`}
             >
               コメント{threads && threads.length > 0 ? `（${threads.length}）` : ""}
@@ -221,7 +221,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
               className={`rounded-md border px-3 py-1.5 text-sm transition ${
                 showReview
                   ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                  : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                  : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700"
               }`}
             >
               AI レビュー
@@ -236,7 +236,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
             <button
               onClick={exportMd}
               title="Markdown をダウンロード"
-              className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-50"
+              className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700"
             >
               エクスポート
             </button>

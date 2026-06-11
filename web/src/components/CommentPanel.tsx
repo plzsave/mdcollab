@@ -39,11 +39,15 @@ export function CommentPanel({
   const currentEmail = state?.currentUser.email ?? "";
   const nameOf = (email: string) => members.find((m) => m.email === email)?.displayName || email;
 
+  // 既定は未解決のみ（GAS 版踏襲）。トグルで解決済みも表示。
+  const [showResolved, setShowResolved] = useState(false);
+  const all = threads ?? [];
+  const openCount = all.filter((t) => t.status === "open").length;
+  const resolvedCount = all.length - openCount;
   // open を先頭、resolved を後ろに。
-  const sorted = (threads ?? [])
-    .slice()
+  const sorted = all
+    .filter((t) => showResolved || t.status === "open")
     .sort((a, b) => (a.status === b.status ? 0 : a.status === "open" ? -1 : 1));
-  const openCount = (threads ?? []).filter((t) => t.status === "open").length;
 
   return (
     <aside className="flex h-full w-80 shrink-0 flex-col rounded-lg border border-slate-200 bg-white lg:w-96">
@@ -51,15 +55,26 @@ export function CommentPanel({
         <h2 className="text-sm font-semibold text-slate-700">
           コメント
           {threads && (
-            <span className="ml-2 text-xs font-normal text-slate-400">
-              未解決 {openCount} / 全 {threads.length}
-            </span>
+            <span className="ml-2 text-xs font-normal text-slate-400">未解決 {openCount}</span>
           )}
         </h2>
         <button onClick={onClose} className="text-xs text-slate-400 hover:text-slate-700">
           閉じる
         </button>
       </div>
+
+      {resolvedCount > 0 && (
+        <div className="border-b border-slate-100 px-4 py-2">
+          <label className="flex items-center gap-1.5 text-xs text-slate-500">
+            <input
+              type="checkbox"
+              checked={showResolved}
+              onChange={(e) => setShowResolved(e.target.checked)}
+            />
+            解決済みも表示（{resolvedCount}）
+          </label>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         {draft && (

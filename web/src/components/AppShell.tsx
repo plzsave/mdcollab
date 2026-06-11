@@ -8,6 +8,9 @@ import type { AppState } from "../api/types";
 export function AppShell({ state, children }: { state: AppState; children: ReactNode }) {
   const logout = useLogout();
   const unread = state.notifications.filter((n) => !n.isRead).length;
+  // ユーザー表示は原則「表示名」に統一（メールはツールチップ）。
+  const me = state.members.find((m) => m.email === state.currentUser.email);
+  const myName = me?.displayName ?? state.currentUser.name ?? state.currentUser.email;
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-800">
@@ -81,7 +84,9 @@ export function AppShell({ state, children }: { state: AppState; children: React
             )}
           </div>
           <div className="flex items-center gap-3 text-sm">
-            <span className="text-slate-600">{state.currentUser.email}</span>
+            <span className="text-slate-700" title={state.currentUser.email}>
+              {myName}
+            </span>
             <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
               {state.currentUser.role}
             </span>
