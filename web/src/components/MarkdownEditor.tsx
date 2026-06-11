@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../api/client";
-import { useSaveDocument } from "../api/hooks";
+import { useDeleteDocument, useSaveDocument } from "../api/hooks";
 import { renderMarkdown } from "../lib/markdown";
 import { CommentPanel, type DraftAnchor } from "./CommentPanel";
 import { AiReviewPanel } from "./AiReviewPanel";
@@ -11,7 +12,9 @@ type Mode = "edit" | "split" | "preview";
 
 export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const save = useSaveDocument(doc.id);
+  const del = useDeleteDocument(doc.folderId);
 
   const [content, setContent] = useState(doc.content);
   const [savedContent, setSavedContent] = useState(doc.content);
@@ -50,6 +53,29 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
   const openReview = () => {
     setShowComments(false);
     setShowReview(true);
+  };
+
+  // 現在の本文（編集中含む）を .md としてダウンロード。
+  const exportMd = () => {
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${doc.title}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const deleteDoc = () => {
+    if (!confirm(`文書「${doc.title}」を削除しますか？元に戻せません。`)) return;
+    del.mutate(doc.id, {
+      onSuccess: () =>
+        navigate(
+          doc.folderId
+            ? { to: "/folders/$folderId", params: { folderId: doc.folderId } }
+            : { to: "/" },
+        ),
+    });
   };
 
   const doSave = (version: number) => {
@@ -130,6 +156,20 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
             className="rounded-md bg-slate-800 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-40"
           >
             {save.isPending ? "保存中…" : "保存"}
+          </button>
+          <button
+            onClick={exportMd}
+            title="Markdown をダウンロード"
+            className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-50"
+          >
+            エクスポート
+          </button>
+          <button
+            onClick={deleteDoc}
+            disabled={del.isPending}
+            className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+          >
+            削除
           </button>
         </div>
       </div>
