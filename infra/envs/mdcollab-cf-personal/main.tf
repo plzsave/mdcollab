@@ -1,31 +1,19 @@
-# 個人デプロイ: Cloudflare（Workers + R2 + Hyperdrive→Neon）
-# state backend: R2 (S3互換) もしくは Terraform Cloud。
+# 個人デプロイ（Cloudflare）のうち「状態を持つインフラ」だけを Terraform/OpenTofu 管理。
+#   - 対象: R2 バケット / Hyperdrive 設定（→ Neon）
+#   - 対象外: Worker のスクリプト・バインディングは wrangler.toml + `wrangler deploy` のまま
+#     （wrangler.toml 自体が Worker の IaC。TF に入れると wrangler deploy と二重管理になるため）
+# state backend: まずローカル（terraform.tfstate）。必要になれば R2(S3互換) backend へ移行可。
 
 terraform {
+  required_version = ">= 1.6.0"
   required_providers {
     cloudflare = {
       source = "cloudflare/cloudflare"
-      # version は terraform init で解決（CLAUDE ルール: バージョン直書きしない）
+      # 2026-06 時点の最新安定 v5 系を確認して採用（registry: 5.19.1）。
+      version = "~> 5.19"
     }
   }
-
-  # backend "s3" {            # R2 を S3 互換 backend として利用
-  #   bucket                      = "mdcollab-tfstate"
-  #   key                         = "cf-personal/terraform.tfstate"
-  #   region                      = "auto"
-  #   endpoints                   = { s3 = "https://<acct>.r2.cloudflarestorage.com" }
-  #   skip_credentials_validation = true
-  #   skip_region_validation      = true
-  #   skip_requesting_account_id  = true
-  #   use_path_style              = true
-  # }
 }
 
-provider "cloudflare" {
-  # api_token は環境変数 CLOUDFLARE_API_TOKEN（CI が注入）
-}
-
-# TODO(Phase 0):
-#   - cloudflare_workers_script  (mdcollab-api)
-#   - cloudflare_r2_bucket       (mdcollab-docs-personal)
-#   - cloudflare_hyperdrive_config (→ Neon connection string)
+# api_token は環境変数 CLOUDFLARE_API_TOKEN から読む（リポジトリには置かない）。
+provider "cloudflare" {}
