@@ -39,7 +39,24 @@ export function AppShell({ state, children }: { state: AppState; children: React
           </ul>
         </nav>
 
-        <div className="border-t border-slate-200 px-2 py-2">
+        <div className="space-y-0.5 border-t border-slate-200 px-2 py-2">
+          <Link
+            to="/notifications"
+            className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm text-slate-600 transition hover:bg-slate-100 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
+          >
+            <span>🔔 通知</span>
+            {unread > 0 && (
+              <span className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-700">
+                {unread}
+              </span>
+            )}
+          </Link>
+          <Link
+            to="/members"
+            className="block rounded-md px-2 py-1.5 text-sm text-slate-600 transition hover:bg-slate-100 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
+          >
+            👥 メンバー
+          </Link>
           <Link
             to="/settings/ai"
             className="block rounded-md px-2 py-1.5 text-sm text-slate-600 transition hover:bg-slate-100 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
@@ -53,9 +70,12 @@ export function AppShell({ state, children }: { state: AppState; children: React
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3">
           <div className="text-sm text-slate-400">
             {unread > 0 && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+              <Link
+                to="/notifications"
+                className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-200"
+              >
                 通知 {unread}
-              </span>
+              </Link>
             )}
           </div>
           <div className="flex items-center gap-3 text-sm">

@@ -6,6 +6,8 @@ import type {
   Comment,
   DocumentFull,
   DocumentMeta,
+  Member,
+  Notification,
   Review,
   Thread,
 } from "./types";
@@ -187,6 +189,79 @@ export function useCreateRevision(documentId: string) {
         `/api/documents/${documentId}/revision`,
         vars,
       ),
+  });
+}
+
+// ── 通知 ─────────────────────────────────────────────────────────────
+// 既読化は通知一覧と state（ヘッダの未読バッジ）の両方を無効化する。
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => api.get<Notification[]>("/api/notifications"),
+  });
+}
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<{ ok: boolean }>(`/api/notifications/${id}/read`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["state"] });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ ok: boolean }>("/api/notifications/read-all"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["state"] });
+    },
+  });
+}
+
+// ── メンバー管理（変更系は owner のみ・サーバ側でも requireOwner）──────
+
+export function useMembers() {
+  return useQuery({ queryKey: ["members"], queryFn: () => api.get<Member[]>("/api/members") });
+}
+
+// メンバー一覧と state（サイドバー等が参照）を無効化する共通後処理。
+function invalidateMembers(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["members"] });
+  qc.invalidateQueries({ queryKey: ["state"] });
+}
+
+export function useAddMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { email: string; displayName: string; role: "owner" | "member" }) =>
+      api.post<Member>("/api/members", vars),
+    onSuccess: () => invalidateMembers(qc),
+  });
+}
+
+export function useUpdateMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { email: string; displayName?: string; role?: "owner" | "member" }) => {
+      const { email, ...patch } = vars;
+      return api.patch<Member>(`/api/members/${encodeURIComponent(email)}`, patch);
+    },
+    onSuccess: () => invalidateMembers(qc),
+  });
+}
+
+export function useRemoveMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (email: string) =>
+      api.delete<{ ok: boolean }>(`/api/members/${encodeURIComponent(email)}`),
+    onSuccess: () => invalidateMembers(qc),
   });
 }
 
