@@ -1,0 +1,8 @@
+# Terraform/OpenTofu のローカル成果物・秘密（コミット禁止）
+# 注: .terraform.lock.hcl は再現性のためコミットする（ここでは無視しない）。
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.auto.tfvars
+crash.log
