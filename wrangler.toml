@@ -4,6 +4,16 @@ compatibility_date = "2026-06-01"
 # postgres.js を Workers で動かすため必須
 compatibility_flags = ["nodejs_compat"]
 
+# フロント(web/)の SPA を同一オリジンで配信。
+#   - directory: vite build の出力（デプロイ前に `bun run build:web` 必須）
+#   - run_worker_first=["/api/*"]: /api/* だけ Worker(API)へ、それ以外は Asset Worker
+#   - not_found_handling=single-page-application: 静的に無いパスは index.html を返す(SPA ルーティング)
+# 同一オリジンなので httpOnly セッション Cookie がそのまま効く。
+[assets]
+directory = "web/dist"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
 # Hyperdrive(→Neon)。手順:
 #   1) Neon の接続文字列を用意
 #   2) wrangler hyperdrive create mdcollab-neon --connection-string="postgres://..."

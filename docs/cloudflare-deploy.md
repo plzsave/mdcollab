@@ -106,12 +106,28 @@ https://mdcollab-api.<you>.workers.dev/api/auth/callback
 
 ## 6. デプロイ & スモークテスト
 
+フロント（`web/`）の SPA も同一オリジンで配信する。`wrangler.toml` の `[assets]` が
+`web/dist` を配信し、`run_worker_first = ["/api/*"]` で API だけ Worker に回す
+（他パスは静的配信＋SPA フォールバック）。**デプロイ前に web をビルドすること。**
+
 ```bash
+# web ビルド → デプロイを一括で行う（推奨）
+bun run deploy
+# = bun run build:web (vite build → web/dist) && wrangler deploy
+
+# 個別に行う場合
+bun run build:web
 npx wrangler deploy
+
 curl -fsS https://mdcollab-api.<you>.workers.dev/health && echo "  health OK"
 ```
 
-`health OK` が出れば本番起動成功。次にブラウザで実 Google ログイン → setup → 文書作成まで通す。
+`health OK` が出れば API は起動。ブラウザで `https://mdcollab-api.<you>.workers.dev/` を開くと
+SPA が表示される（同一オリジンなのでセッション Cookie がそのまま効く）。
+そのまま 実 Google ログイン → setup → 文書作成まで通す。
+
+> SPA を更新したら毎回 `bun run build:web` してから `wrangler deploy`（`bun run deploy` なら自動）。
+> `web/dist` はビルド成果物なので Git にはコミットしない（`.gitignore` 済み）。
 
 ---
 
