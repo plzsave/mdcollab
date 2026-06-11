@@ -1,10 +1,22 @@
 @import "tailwindcss";
 
+/* dark: を OS 設定ではなく html.dark クラスで切り替える方式にする（手動トグル＋OS追従を JS で制御）。 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ベース配色。アプリのページ背景・既定文字色（コンポーネント側が未指定の箇所をカバー）。 */
+html.dark body {
+  background: #0f172a; /* slate-900 */
+  color: #e2e8f0; /* slate-200 */
+}
+
 /* Markdown プレビューの最小スタイル（Tailwind typography 非依存・手書き） */
 .md-preview {
   color: #334155;
   line-height: 1.7;
   font-size: 0.925rem;
+}
+.dark .md-preview {
+  color: #cbd5e1; /* slate-300 */
 }
 .md-preview h1 {
   font-size: 1.6rem;
@@ -126,4 +138,48 @@
   position: fixed;
   z-index: 50;
   transform: translateX(-50%) translateY(-8px);
+}
+
+/* ── ダークモード上書き（md-preview の各要素・ハイライト）────────────── */
+.dark .md-preview h1 {
+  border-bottom-color: #334155;
+}
+.dark .md-preview a {
+  color: #60a5fa;
+}
+.dark .md-preview code {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+.dark .md-preview pre {
+  background: #020617;
+}
+.dark .md-preview blockquote {
+  border-left-color: #475569;
+  color: #94a3b8;
+}
+.dark .md-preview th,
+.dark .md-preview td {
+  border-color: #334155;
+}
+.dark .md-preview hr {
+  border-top-color: #334155;
+}
+.dark .comment-highlight {
+  background: #78350f; /* amber-900 */
+  color: #fef3c7;
+  box-shadow: inset 0 -1px 0 #b45309;
+}
+.dark .comment-highlight:hover {
+  background: #92400e;
+}
+.dark .comment-highlight-resolved {
+  background: #334155;
+  color: #cbd5e1;
+  box-shadow: inset 0 -1px 0 #475569;
+}
+.dark .comment-highlight-active {
+  background: #b45309;
+  color: #fff7ed;
+  box-shadow: 0 0 0 2px #f59e0b;
 }

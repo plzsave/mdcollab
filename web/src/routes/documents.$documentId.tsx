@@ -11,7 +11,7 @@ function DocumentView() {
   if (isLoading) return <p className="text-sm text-slate-400">読み込み中…</p>;
   if (error)
     return (
-      <p className="text-sm text-red-600">
+      <p className="text-sm text-red-600 dark:text-red-400">
         {error instanceof Error ? error.message : "読み込みに失敗しました"}
       </p>
     );

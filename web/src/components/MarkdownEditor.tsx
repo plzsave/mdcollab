@@ -188,18 +188,18 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-slate-800">{doc.title}</h1>
+            <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{doc.title}</h1>
             <span className="text-xs text-slate-400">v{baseVersion}</span>
             {dirty && <span className="text-xs text-amber-600">● 未保存</span>}
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex overflow-hidden rounded-md border border-slate-200 text-xs">
+            <div className="flex overflow-hidden rounded-md border border-slate-200 dark:border-slate-700 text-xs">
               {(["edit", "split", "preview"] as Mode[]).map((m) => (
                 <button
                   key={m}
                   onClick={() => setMode(m)}
                   className={`px-3 py-1.5 ${
-                    mode === m ? "bg-slate-800 text-white" : "bg-white text-slate-500 hover:bg-slate-50"
+                    mode === m ? "bg-slate-800 text-white" : "bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   {m === "edit" ? "編集" : m === "split" ? "分割" : "プレビュー"}
@@ -210,8 +210,8 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
               onClick={openComments}
               className={`rounded-md border px-3 py-1.5 text-sm transition ${
                 showComments
-                  ? "border-sky-300 bg-sky-50 text-sky-700"
-                  : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700"
+                  ? "border-sky-300 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300"
+                  : "border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:text-slate-200"
               }`}
             >
               コメント{threads && threads.length > 0 ? `（${threads.length}）` : ""}
@@ -220,8 +220,8 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
               onClick={openReview}
               className={`rounded-md border px-3 py-1.5 text-sm transition ${
                 showReview
-                  ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                  : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700"
+                  ? "border-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
+                  : "border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:text-slate-200"
               }`}
             >
               AI レビュー
@@ -236,14 +236,14 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
             <button
               onClick={exportMd}
               title="Markdown をダウンロード"
-              className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700"
+              className="rounded-md border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-500 hover:border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:text-slate-200"
             >
               エクスポート
             </button>
             <button
               onClick={deleteDoc}
               disabled={del.isPending}
-              className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+              className="rounded-md border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
             >
               削除
             </button>
@@ -257,7 +257,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
         )}
 
         {conflict !== null && (
-          <div className="mt-3 flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+          <div className="mt-3 flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/40 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-200">
             <span>他の人が更新しました（サーバは v{conflict}）。あなたの編集は保持しています。</span>
             <div className="flex gap-2">
               <button
@@ -268,7 +268,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
               </button>
               <button
                 onClick={reloadLatest}
-                className="rounded border border-amber-300 px-3 py-1 text-xs text-amber-800 hover:bg-amber-100"
+                className="rounded border border-amber-300 px-3 py-1 text-xs text-amber-800 dark:text-amber-200 hover:bg-amber-100"
               >
                 最新を読み込む（編集破棄）
               </button>
@@ -277,7 +277,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
         )}
 
         {save.error instanceof ApiError && save.error.status !== 409 && (
-          <p className="mt-3 rounded-md bg-red-50 px-4 py-2 text-sm text-red-700">
+          <p className="mt-3 rounded-md bg-red-50 dark:bg-red-900/30 px-4 py-2 text-sm text-red-700 dark:text-red-300">
             保存に失敗しました: {save.error.message}
           </p>
         )}
@@ -288,7 +288,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               spellCheck={false}
-              className="h-full min-h-[60vh] w-full resize-none rounded-lg border border-slate-200 bg-white p-4 font-mono text-sm leading-relaxed text-slate-800 focus:border-slate-400 focus:outline-none"
+              className="h-full min-h-[60vh] w-full resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 font-mono text-sm leading-relaxed text-slate-800 dark:text-slate-100 focus:border-slate-400 focus:outline-none"
             />
           )}
           {mode !== "edit" && (
@@ -296,7 +296,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
               ref={previewRef}
               onMouseUp={onPreviewMouseUp}
               onClick={onPreviewClick}
-              className="md-preview h-full min-h-[60vh] w-full overflow-y-auto rounded-lg border border-slate-200 bg-white p-5"
+              className="md-preview h-full min-h-[60vh] w-full overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5"
             />
           )}
         </div>

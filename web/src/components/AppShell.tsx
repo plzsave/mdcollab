@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { useCreateFolder, useLogout } from "../api/hooks";
 import { ApiError } from "../api/client";
+import { ThemeToggle } from "./ThemeToggle";
 import type { AppState } from "../api/types";
 
 // ログイン済みメンバーの共通レイアウト（左サイドバー: フォルダ一覧 + 上部バー）。
@@ -13,10 +14,10 @@ export function AppShell({ state, children }: { state: AppState; children: React
   const myName = me?.displayName ?? state.currentUser.name ?? state.currentUser.email;
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-800">
-      <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
-        <div className="border-b border-slate-200 px-4 py-4">
-          <Link to="/" className="text-lg font-bold text-slate-800">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100">
+      <aside className="flex w-64 flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+        <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-4">
+          <Link to="/" className="text-lg font-bold text-slate-800 dark:text-slate-100">
             mdcollab
           </Link>
         </div>
@@ -34,7 +35,7 @@ export function AppShell({ state, children }: { state: AppState; children: React
                 <Link
                   to="/folders/$folderId"
                   params={{ folderId: f.id }}
-                  className="block rounded-md px-2 py-1.5 text-sm text-slate-600 transition hover:bg-slate-100 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
+                  className="block rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
                 >
                   {f.name}
                 </Link>
@@ -44,27 +45,27 @@ export function AppShell({ state, children }: { state: AppState; children: React
           <NewFolderForm />
         </nav>
 
-        <div className="space-y-0.5 border-t border-slate-200 px-2 py-2">
+        <div className="space-y-0.5 border-t border-slate-200 dark:border-slate-700 px-2 py-2">
           <Link
             to="/notifications"
-            className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm text-slate-600 transition hover:bg-slate-100 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
+            className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
           >
             <span>🔔 通知</span>
             {unread > 0 && (
-              <span className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-700">
+              <span className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                 {unread}
               </span>
             )}
           </Link>
           <Link
             to="/members"
-            className="block rounded-md px-2 py-1.5 text-sm text-slate-600 transition hover:bg-slate-100 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
+            className="block rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
           >
             👥 メンバー
           </Link>
           <Link
             to="/settings/ai"
-            className="block rounded-md px-2 py-1.5 text-sm text-slate-600 transition hover:bg-slate-100 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
+            className="block rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
           >
             ⚙ AI 設定
           </Link>
@@ -72,19 +73,20 @@ export function AppShell({ state, children }: { state: AppState; children: React
       </aside>
 
       <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3">
+        <header className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-6 py-3">
           <div className="text-sm text-slate-400">
             {unread > 0 && (
               <Link
                 to="/notifications"
-                className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-200"
+                className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-200"
               >
                 通知 {unread}
               </Link>
             )}
           </div>
           <div className="flex items-center gap-3 text-sm">
-            <span className="text-slate-700" title={state.currentUser.email}>
+            <ThemeToggle />
+            <span className="text-slate-700 dark:text-slate-200" title={state.currentUser.email}>
               {myName}
             </span>
             <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
@@ -92,7 +94,7 @@ export function AppShell({ state, children }: { state: AppState; children: React
             </span>
             <button
               onClick={() => logout.mutate()}
-              className="text-xs text-slate-400 hover:text-slate-700"
+              className="text-xs text-slate-400 hover:text-slate-700 dark:text-slate-200"
             >
               ログアウト
             </button>
@@ -125,7 +127,7 @@ function NewFolderForm() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mt-1 w-full rounded-md px-2 py-1.5 text-left text-sm text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+        className="mt-1 w-full rounded-md px-2 py-1.5 text-left text-sm text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:text-slate-300"
       >
         ＋ 新規フォルダ
       </button>
@@ -143,17 +145,17 @@ function NewFolderForm() {
           if (e.key === "Escape") setOpen(false);
         }}
         placeholder="フォルダ名"
-        className="w-full rounded border border-slate-200 px-2 py-1 text-sm focus:border-slate-400 focus:outline-none"
+        className="w-full rounded border border-slate-200 dark:border-slate-700 px-2 py-1 text-sm focus:border-slate-400 focus:outline-none"
       />
       {create.error && (
-        <p className="mt-1 text-[11px] text-red-600">
+        <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">
           {create.error instanceof ApiError ? create.error.message : "作成に失敗しました"}
         </p>
       )}
       <div className="mt-1 flex justify-end gap-2">
         <button
           onClick={() => setOpen(false)}
-          className="text-[11px] text-slate-400 hover:text-slate-700"
+          className="text-[11px] text-slate-400 hover:text-slate-700 dark:text-slate-200"
         >
           取消
         </button>
