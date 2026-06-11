@@ -9,7 +9,7 @@ function Overview() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="text-xl font-bold text-slate-800">概要</h1>
+      <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">概要</h1>
       <p className="mt-1 text-sm text-slate-500">
         フォルダを選んで文書を開きます。左のサイドバーからも移動できます。
       </p>
@@ -20,9 +20,9 @@ function Overview() {
             key={f.id}
             to="/folders/$folderId"
             params={{ folderId: f.id }}
-            className="rounded-lg border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-sm"
+            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 transition hover:border-slate-300 dark:border-slate-600 hover:shadow-sm"
           >
-            <div className="font-medium text-slate-800">{f.name}</div>
+            <div className="font-medium text-slate-800 dark:text-slate-100">{f.name}</div>
             <div className="mt-1 text-xs text-slate-400">作成: {f.createdBy}</div>
           </Link>
         ))}

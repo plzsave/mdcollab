@@ -12,7 +12,7 @@ function RootLayout() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-400">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 text-sm text-slate-400">
         読み込み中…
       </div>
     );
@@ -23,7 +23,7 @@ function RootLayout() {
     if (status === 401) return <LoginScreen />;
     if (status === 403) return <NotMemberScreen />;
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-red-600">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 text-sm text-red-600 dark:text-red-400">
         エラー: {error instanceof Error ? error.message : "不明なエラー"}
       </div>
     );

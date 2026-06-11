@@ -82,9 +82,9 @@ export function FolderToolbar({
                 if (e.key === "Enter") submitRename();
                 if (e.key === "Escape") setEditingName(false);
               }}
-              className="rounded border border-slate-300 px-2 py-1 text-xl font-bold text-slate-800 focus:border-slate-400 focus:outline-none"
+              className="rounded border border-slate-300 dark:border-slate-600 px-2 py-1 text-xl font-bold text-slate-800 dark:text-slate-100 focus:border-slate-400 focus:outline-none"
             />
-            <button onClick={submitRename} className="text-xs text-slate-500 hover:text-slate-800">
+            <button onClick={submitRename} className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-100">
               保存
             </button>
             <button
@@ -92,20 +92,20 @@ export function FolderToolbar({
                 setNameDraft(folderName);
                 setEditingName(false);
               }}
-              className="text-xs text-slate-400 hover:text-slate-700"
+              className="text-xs text-slate-400 hover:text-slate-700 dark:text-slate-200"
             >
               取消
             </button>
           </>
         ) : (
           <>
-            <h1 className="text-xl font-bold text-slate-800">{folderName}</h1>
+            <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{folderName}</h1>
             <button
               onClick={() => {
                 setNameDraft(folderName);
                 setEditingName(true);
               }}
-              className="text-xs text-slate-400 hover:text-slate-700"
+              className="text-xs text-slate-400 hover:text-slate-700 dark:text-slate-200"
             >
               名前変更
             </button>
@@ -135,7 +135,7 @@ export function FolderToolbar({
         <button
           onClick={() => fileRef.current?.click()}
           disabled={importDocs.isPending}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:border-slate-400 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40"
+          className="rounded-md border border-slate-300 dark:border-slate-600 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:border-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-800 dark:text-slate-100 disabled:opacity-40"
         >
           {importDocs.isPending ? "取込中…" : "インポート"}
         </button>
@@ -150,7 +150,7 @@ export function FolderToolbar({
       </div>
 
       {creating && (
-        <div className="flex w-full items-center gap-2 rounded-md border border-slate-200 bg-white p-2">
+        <div className="flex w-full items-center gap-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2">
           <input
             autoFocus
             value={title}
@@ -160,7 +160,7 @@ export function FolderToolbar({
               if (e.key === "Escape") setCreating(false);
             }}
             placeholder="文書タイトル"
-            className="flex-1 rounded border border-slate-200 px-2.5 py-1.5 text-sm focus:border-slate-400 focus:outline-none"
+            className="flex-1 rounded border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-sm focus:border-slate-400 focus:outline-none"
           />
           <button
             onClick={submitCreate}
@@ -173,7 +173,7 @@ export function FolderToolbar({
       )}
 
       {(rename.error || delFolder.error || createDoc.error || importDocs.error) && (
-        <p className="w-full text-xs text-red-600">
+        <p className="w-full text-xs text-red-600 dark:text-red-400">
           {errMsg(rename.error ?? delFolder.error ?? createDoc.error ?? importDocs.error)}
         </p>
       )}

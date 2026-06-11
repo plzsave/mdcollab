@@ -23,13 +23,13 @@ function NotificationsView() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-800">
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
           通知{unread > 0 && <span className="ml-2 text-sm font-normal text-amber-600">未読 {unread}</span>}
         </h1>
         <button
           onClick={() => markAll.mutate()}
           disabled={unread === 0 || markAll.isPending}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+          className="rounded-md border border-slate-300 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40"
         >
           すべて既読
         </button>
@@ -37,7 +37,7 @@ function NotificationsView() {
 
       {isLoading && <p className="mt-4 text-sm text-slate-400">読み込み中…</p>}
       {error && (
-        <p className="mt-4 text-sm text-red-600">
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">
           {error instanceof Error ? error.message : "読み込みに失敗しました"}
         </p>
       )}
@@ -47,7 +47,7 @@ function NotificationsView() {
           <NotificationItem key={n.id} note={n} />
         ))}
         {notes?.length === 0 && (
-          <li className="rounded-lg border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-400">
+          <li className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-6 text-center text-sm text-slate-400">
             通知はありません。
           </li>
         )}
@@ -62,12 +62,12 @@ function NotificationItem({ note }: { note: Notification }) {
   const body = (
     <div
       className={`rounded-lg border px-4 py-3 ${
-        note.isRead ? "border-slate-200 bg-white" : "border-amber-200 bg-amber-50"
+        note.isRead ? "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900" : "border-amber-200 bg-amber-50 dark:bg-amber-900/40"
       }`}
     >
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-2 text-xs">
-          <span className="rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
+          <span className="rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-600 dark:text-slate-300">
             {TYPE_LABEL[note.type] ?? note.type}
           </span>
           {note.documentName && <span className="text-slate-500">{note.documentName}</span>}
@@ -75,7 +75,7 @@ function NotificationItem({ note }: { note: Notification }) {
         </span>
         <span className="text-[11px] text-slate-400">{fmtTime(note.createdAt)}</span>
       </div>
-      {note.message && <p className="mt-1 text-sm text-slate-700">{note.message}</p>}
+      {note.message && <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">{note.message}</p>}
     </div>
   );
 
@@ -103,7 +103,7 @@ function NotificationItem({ note }: { note: Notification }) {
       {!note.isRead && (
         <button
           onClick={() => markRead.mutate(note.id)}
-          className="mt-1 text-[11px] text-slate-400 hover:text-slate-700"
+          className="mt-1 text-[11px] text-slate-400 hover:text-slate-700 dark:text-slate-200"
         >
           既読にする
         </button>

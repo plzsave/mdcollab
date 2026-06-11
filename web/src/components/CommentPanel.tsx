@@ -50,21 +50,21 @@ export function CommentPanel({
     .sort((a, b) => (a.status === b.status ? 0 : a.status === "open" ? -1 : 1));
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col rounded-lg border border-slate-200 bg-white lg:w-96">
-      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-        <h2 className="text-sm font-semibold text-slate-700">
+    <aside className="flex h-full w-80 shrink-0 flex-col rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 lg:w-96">
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-4 py-3">
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           コメント
           {threads && (
             <span className="ml-2 text-xs font-normal text-slate-400">未解決 {openCount}</span>
           )}
         </h2>
-        <button onClick={onClose} className="text-xs text-slate-400 hover:text-slate-700">
+        <button onClick={onClose} className="text-xs text-slate-400 hover:text-slate-700 dark:text-slate-200">
           閉じる
         </button>
       </div>
 
       {resolvedCount > 0 && (
-        <div className="border-b border-slate-100 px-4 py-2">
+        <div className="border-b border-slate-100 dark:border-slate-800 px-4 py-2">
           <label className="flex items-center gap-1.5 text-xs text-slate-500">
             <input
               type="checkbox"
@@ -151,15 +151,15 @@ function NewThreadComposer({
   };
 
   return (
-    <div className="mb-4 rounded-md border border-sky-200 bg-sky-50 p-3">
-      <div className="mb-2 text-xs font-medium text-sky-700">新規スレッド</div>
+    <div className="mb-4 rounded-md border border-sky-200 bg-sky-50 dark:bg-sky-900/30 p-3">
+      <div className="mb-2 text-xs font-medium text-sky-700 dark:text-sky-300">新規スレッド</div>
       <AnchorQuote text={draft.text} />
       <textarea
         autoFocus
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="コメントを入力…"
-        className="mt-2 h-20 w-full resize-none rounded border border-slate-200 bg-white p-2 text-sm focus:border-sky-400 focus:outline-none"
+        className="mt-2 h-20 w-full resize-none rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 text-sm focus:border-sky-400 focus:outline-none"
       />
       <MentionPicker
         members={members}
@@ -168,12 +168,12 @@ function NewThreadComposer({
         onChange={setMentions}
       />
       {create.error && (
-        <p className="mt-1 text-xs text-red-600">{create.error.message}</p>
+        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{create.error.message}</p>
       )}
       <div className="mt-2 flex justify-end gap-2">
         <button
           onClick={onDone}
-          className="rounded px-3 py-1 text-xs text-slate-500 hover:bg-slate-100"
+          className="rounded px-3 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
         >
           キャンセル
         </button>
@@ -236,10 +236,10 @@ function ThreadCard({
       ref={cardRef}
       className={`rounded-md border p-3 ${
         active
-          ? "border-amber-400 bg-amber-50 ring-2 ring-amber-300"
+          ? "border-amber-400 bg-amber-50 dark:bg-amber-900/40 ring-2 ring-amber-300"
           : resolved
-            ? "border-slate-200 bg-slate-50 opacity-80"
-            : "border-slate-200 bg-white"
+            ? "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 opacity-80"
+            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
       }`}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
@@ -252,7 +252,7 @@ function ThreadCard({
           <AnchorQuote text={thread.anchorText} />
         </button>
         {resolved && (
-          <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+          <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
             解決済み
           </span>
         )}
@@ -276,7 +276,7 @@ function ThreadCard({
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             placeholder="返信…"
-            className="h-14 w-full resize-none rounded border border-slate-200 bg-white p-2 text-sm focus:border-slate-400 focus:outline-none"
+            className="h-14 w-full resize-none rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 text-sm focus:border-slate-400 focus:outline-none"
           />
           <MentionPicker
             members={members}
@@ -300,7 +300,7 @@ function ThreadCard({
         <button
           onClick={() => setStatus.mutate({ threadId: thread.id, reopen: resolved })}
           disabled={setStatus.isPending}
-          className="rounded border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+          className="rounded border border-slate-300 dark:border-slate-600 px-3 py-1 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40"
         >
           {resolved ? "再開" : "解決"}
         </button>
@@ -334,9 +334,9 @@ function CommentItem({
   };
 
   return (
-    <div className="rounded bg-slate-50 px-2.5 py-2 text-sm">
+    <div className="rounded bg-slate-50 dark:bg-slate-800 px-2.5 py-2 text-sm">
       <div className="mb-0.5 flex items-baseline justify-between gap-2">
-        <span className="text-xs font-medium text-slate-700">{authorName}</span>
+        <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{authorName}</span>
         <span className="text-[10px] text-slate-400">{fmtTime(comment.createdAt)}</span>
       </div>
 
@@ -345,7 +345,7 @@ function CommentItem({
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            className="h-16 w-full resize-none rounded border border-slate-200 bg-white p-2 text-sm focus:border-slate-400 focus:outline-none"
+            className="h-16 w-full resize-none rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 text-sm focus:border-slate-400 focus:outline-none"
           />
           <div className="mt-1 flex justify-end gap-2">
             <button
@@ -353,7 +353,7 @@ function CommentItem({
                 setDraft(comment.content);
                 setEditing(false);
               }}
-              className="text-xs text-slate-500 hover:text-slate-700"
+              className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-200"
             >
               取消
             </button>
@@ -368,10 +368,10 @@ function CommentItem({
         </div>
       ) : (
         <>
-          <p className="whitespace-pre-wrap break-words text-slate-700">{comment.content}</p>
+          <p className="whitespace-pre-wrap break-words text-slate-700 dark:text-slate-200">{comment.content}</p>
           {canEdit && (
             <div className="mt-1 flex gap-2 text-[11px] text-slate-400">
-              <button onClick={() => setEditing(true)} className="hover:text-slate-700">
+              <button onClick={() => setEditing(true)} className="hover:text-slate-700 dark:text-slate-200">
                 編集
               </button>
               <button
@@ -413,7 +413,7 @@ function MentionPicker({
     <div className="mt-1">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="text-[11px] text-slate-500 hover:text-slate-700"
+        className="text-[11px] text-slate-500 hover:text-slate-700 dark:text-slate-200"
       >
         @ メンション{value.length > 0 ? `（${value.length}）` : ""}
       </button>
@@ -428,7 +428,7 @@ function MentionPicker({
                 className={`rounded-full px-2 py-0.5 text-[11px] ${
                   on
                     ? "bg-sky-600 text-white"
-                    : "border border-slate-300 text-slate-600 hover:bg-slate-100"
+                    : "border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
                 }`}
               >
                 {m.displayName}

@@ -19,7 +19,7 @@ function MembersView() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="text-xl font-bold text-slate-800">メンバー</h1>
+      <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">メンバー</h1>
       {!isOwner && (
         <p className="mt-1 text-xs text-slate-400">
           閲覧のみ。追加・変更・削除は owner のみ可能です。
@@ -30,12 +30,12 @@ function MembersView() {
 
       {isLoading && <p className="mt-4 text-sm text-slate-400">読み込み中…</p>}
       {error && (
-        <p className="mt-4 text-sm text-red-600">
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">
           {error instanceof Error ? error.message : "読み込みに失敗しました"}
         </p>
       )}
 
-      <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
         {(members ?? []).map((m) => (
           <MemberRow
             key={m.email}
@@ -73,8 +73,8 @@ function AddMemberForm() {
   };
 
   return (
-    <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
-      <div className="text-sm font-semibold text-slate-700">メンバーを追加</div>
+    <div className="mt-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
+      <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">メンバーを追加</div>
       <div className="mt-3 flex flex-wrap items-end gap-2">
         <div className="min-w-[200px] flex-1">
           <label className="block text-xs text-slate-500">メールアドレス</label>
@@ -82,7 +82,7 @@ function AddMemberForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="user@example.com"
-            className="mt-1 w-full rounded border border-slate-200 px-2.5 py-1.5 text-sm focus:border-slate-400 focus:outline-none"
+            className="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-sm focus:border-slate-400 focus:outline-none"
           />
         </div>
         <div className="min-w-[140px] flex-1">
@@ -91,7 +91,7 @@ function AddMemberForm() {
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="山田 太郎"
-            className="mt-1 w-full rounded border border-slate-200 px-2.5 py-1.5 text-sm focus:border-slate-400 focus:outline-none"
+            className="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-sm focus:border-slate-400 focus:outline-none"
           />
         </div>
         <div>
@@ -99,7 +99,7 @@ function AddMemberForm() {
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as "member" | "owner")}
-            className="mt-1 rounded border border-slate-200 px-2.5 py-1.5 text-sm focus:border-slate-400 focus:outline-none"
+            className="mt-1 rounded border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-sm focus:border-slate-400 focus:outline-none"
           >
             <option value="member">member</option>
             <option value="owner">owner</option>
@@ -114,7 +114,7 @@ function AddMemberForm() {
         </button>
       </div>
       {add.error && (
-        <p className="mt-2 text-xs text-red-600">
+        <p className="mt-2 text-xs text-red-600 dark:text-red-400">
           {add.error instanceof ApiError ? add.error.message : "追加に失敗しました"}
         </p>
       )}
@@ -147,7 +147,7 @@ function MemberRow({
   };
 
   return (
-    <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 last:border-b-0">
+    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-3 last:border-b-0">
       <div className="min-w-0">
         {editingName ? (
           <div className="flex items-center gap-2">
@@ -159,9 +159,9 @@ function MemberRow({
                 if (e.key === "Enter") saveName();
                 if (e.key === "Escape") setEditingName(false);
               }}
-              className="rounded border border-slate-300 px-2 py-1 text-sm focus:border-slate-400 focus:outline-none"
+              className="rounded border border-slate-300 dark:border-slate-600 px-2 py-1 text-sm focus:border-slate-400 focus:outline-none"
             />
-            <button onClick={saveName} className="text-xs text-slate-500 hover:text-slate-800">
+            <button onClick={saveName} className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-100">
               保存
             </button>
             <button
@@ -169,13 +169,13 @@ function MemberRow({
                 setNameDraft(member.displayName);
                 setEditingName(false);
               }}
-              className="text-xs text-slate-400 hover:text-slate-700"
+              className="text-xs text-slate-400 hover:text-slate-700 dark:text-slate-200"
             >
               取消
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-100">
             <span className="truncate">{member.displayName}</span>
             {isSelf && <span className="text-xs text-slate-400">(自分)</span>}
             {isOwner && (
@@ -184,7 +184,7 @@ function MemberRow({
                   setNameDraft(member.displayName);
                   setEditingName(true);
                 }}
-                className="text-[11px] text-slate-400 hover:text-slate-700"
+                className="text-[11px] text-slate-400 hover:text-slate-700 dark:text-slate-200"
               >
                 名前変更
               </button>
@@ -193,7 +193,7 @@ function MemberRow({
         )}
         <div className="truncate text-xs text-slate-400">{member.email}</div>
         {err && (
-          <div className="text-xs text-red-600">
+          <div className="text-xs text-red-600 dark:text-red-400">
             {err instanceof ApiError ? err.message : "操作に失敗しました"}
           </div>
         )}
@@ -207,7 +207,7 @@ function MemberRow({
             onChange={(e) =>
               update.mutate({ email: member.email, role: e.target.value as "owner" | "member" })
             }
-            className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 focus:border-slate-400 focus:outline-none"
+            className="rounded border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs text-slate-600 dark:text-slate-300 focus:border-slate-400 focus:outline-none"
           >
             <option value="member">member</option>
             <option value="owner">owner</option>

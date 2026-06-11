@@ -42,13 +42,13 @@ function FolderView() {
             アーカイブも表示
           </label>
         )}
-        <div className="flex overflow-hidden rounded-md border border-slate-200 text-xs">
+        <div className="flex overflow-hidden rounded-md border border-slate-200 dark:border-slate-700 text-xs">
           {(["list", "board"] as View[]).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
               className={`px-3 py-1.5 ${
-                view === v ? "bg-slate-800 text-white" : "bg-white text-slate-500 hover:bg-slate-50"
+                view === v ? "bg-slate-800 text-white" : "bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800"
               }`}
             >
               {v === "list" ? "一覧" : "ボード"}
@@ -59,7 +59,7 @@ function FolderView() {
 
       {isLoading && <p className="mt-4 text-sm text-slate-400">読み込み中…</p>}
       {error && (
-        <p className="mt-4 text-sm text-red-600">
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">
           {error instanceof Error ? error.message : "読み込みに失敗しました"}
         </p>
       )}
@@ -79,15 +79,15 @@ function FolderView() {
           {docs && docs.length > 0 && state && (
             <StatusSummary docs={docs} statuses={state.statuses} />
           )}
-          <ul className="mt-3 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-700 dark:bg-slate-900">
+          <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 dark:divide-slate-800 dark:border-slate-700 dark:bg-slate-900">
             {(docs ?? []).map((d) => (
               <li key={d.id}>
                 <Link
                   to="/documents/$documentId"
                   params={{ documentId: d.id }}
-                  className="flex items-center justify-between px-4 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="flex items-center justify-between px-4 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-800 dark:hover:bg-slate-800"
                 >
-                  <span className="font-medium text-slate-800 dark:text-slate-100">{d.title}</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-100 dark:text-slate-100">{d.title}</span>
                   <span className="flex items-center gap-2 text-xs text-slate-400">
                     <span
                       className={`rounded px-2 py-0.5 ${statusBadgeClass(d.statusId, state?.statuses ?? [])}`}
@@ -126,13 +126,13 @@ function StatusSummary({ docs, statuses }: { docs: DocumentMeta[]; statuses: Sta
   ];
 
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-900">
       <span className="text-xs font-semibold text-slate-400">進捗</span>
       {cells.map((c) => (
         <span key={c.key} className="flex items-center gap-1.5">
           <span className={`h-2.5 w-2.5 rounded-full ${statusDotClass(c.statusId, statuses)}`} />
-          <span className="text-slate-600 dark:text-slate-300">{c.label}</span>
-          <span className="font-semibold text-slate-800 dark:text-slate-100">{c.count}</span>
+          <span className="text-slate-600 dark:text-slate-300 dark:text-slate-300">{c.label}</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-100 dark:text-slate-100">{c.count}</span>
         </span>
       ))}
       <span className="ml-auto text-xs text-slate-400">計 {active.length} 件</span>
