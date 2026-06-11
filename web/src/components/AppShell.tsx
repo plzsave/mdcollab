@@ -38,6 +38,15 @@ export function AppShell({ state, children }: { state: AppState; children: React
             ))}
           </ul>
         </nav>
+
+        <div className="border-t border-slate-200 px-2 py-2">
+          <Link
+            to="/settings/ai"
+            className="block rounded-md px-2 py-1.5 text-sm text-slate-600 transition hover:bg-slate-100 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
+          >
+            ⚙ AI 設定
+          </Link>
+        </div>
       </aside>
 
       <div className="flex flex-1 flex-col">

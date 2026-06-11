@@ -73,6 +73,26 @@ export interface Comment {
   deleted: boolean;
 }
 
+// AI 設定（秘密は真偽/スコープのみ・平文は返らない）。GET/PUT /api/ai/settings。
+export interface AiSettings {
+  provider: string | null;
+  model: string | null;
+  githubRepo: string | null;
+  keys: Record<string, boolean>; // provider -> キー設定済みか
+  githubPats: string[];
+}
+
+// 保存済みレビュー。GET /api/documents/:id/reviews。
+export interface Review {
+  id: string;
+  documentId: string;
+  provider: string;
+  model: string;
+  content: string;
+  createdBy: string;
+  createdAt: string;
+}
+
 // スレッド（アンカー＋非削除コメント同梱）。GET /api/documents/:id/threads。
 export interface Thread {
   id: string;
