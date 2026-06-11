@@ -29,6 +29,27 @@ export function useDocument(documentId: string) {
   });
 }
 
+// 文書メタ更新（status / assignee / archived / title）。フォルダ一覧と本体を無効化。
+export function useUpdateDocumentMeta(folderId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      id: string;
+      statusId?: string | null;
+      assignee?: string | null;
+      archived?: boolean;
+      title?: string;
+    }) => {
+      const { id, ...patch } = vars;
+      return api.patch<DocumentMeta>(`/api/documents/${id}`, patch);
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["folder-documents", folderId] });
+      qc.invalidateQueries({ queryKey: ["document", vars.id] });
+    },
+  });
+}
+
 // 文書保存（If-Match: version → 409 で楽観ロック衝突）。
 // force=true のときはサーバ現行 version に対して上書き（衝突を承知で再保存）。
 export function useSaveDocument(documentId: string) {
