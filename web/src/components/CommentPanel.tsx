@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useAppState,
   useAddReply,
@@ -22,11 +22,15 @@ export function CommentPanel({
   draft,
   onClearDraft,
   onClose,
+  activeThreadId,
+  onFocusThread,
 }: {
   documentId: string;
   draft: DraftAnchor | null;
   onClearDraft: () => void;
   onClose: () => void;
+  activeThreadId?: string | null;
+  onFocusThread?: (threadId: string) => void;
 }) {
   const { data: state } = useAppState();
   const { data: threads, isLoading } = useThreads(documentId);
@@ -84,6 +88,8 @@ export function CommentPanel({
               members={members}
               currentEmail={currentEmail}
               nameOf={nameOf}
+              active={t.id === activeThreadId}
+              onFocus={onFocusThread}
             />
           ))}
         </div>
@@ -174,18 +180,28 @@ function ThreadCard({
   members,
   currentEmail,
   nameOf,
+  active,
+  onFocus,
 }: {
   documentId: string;
   thread: Thread;
   members: Member[];
   currentEmail: string;
   nameOf: (email: string) => string;
+  active: boolean;
+  onFocus?: (threadId: string) => void;
 }) {
   const reply = useAddReply(documentId, thread.id);
   const setStatus = useSetThreadStatus(documentId);
   const [replyText, setReplyText] = useState("");
   const [replyMentions, setReplyMentions] = useState<string[]>([]);
   const resolved = thread.status === "resolved";
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // 本文側からフォーカスされたらカードを見える位置へスクロール。
+  useEffect(() => {
+    if (active) cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [active]);
 
   const submitReply = () => {
     if (!replyText.trim()) return;
@@ -202,12 +218,24 @@ function ThreadCard({
 
   return (
     <div
+      ref={cardRef}
       className={`rounded-md border p-3 ${
-        resolved ? "border-slate-200 bg-slate-50 opacity-80" : "border-slate-200 bg-white"
+        active
+          ? "border-amber-400 bg-amber-50 ring-2 ring-amber-300"
+          : resolved
+            ? "border-slate-200 bg-slate-50 opacity-80"
+            : "border-slate-200 bg-white"
       }`}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
-        <AnchorQuote text={thread.anchorText} />
+        <button
+          type="button"
+          onClick={() => onFocus?.(thread.id)}
+          className="min-w-0 flex-1 text-left"
+          title="本文の該当箇所へ移動"
+        >
+          <AnchorQuote text={thread.anchorText} />
+        </button>
         {resolved && (
           <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
             解決済み
