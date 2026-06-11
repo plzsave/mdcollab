@@ -84,3 +84,46 @@
   border-top: 1px solid #e2e8f0;
   margin: 1.2rem 0;
 }
+
+/* コメントアンカーのハイライト（プレビュー内） */
+.comment-highlight {
+  background: #fef08a; /* amber-200 */
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0 1px;
+  box-shadow: inset 0 -1px 0 #eab308;
+  transition: background 0.15s;
+}
+.comment-highlight:hover {
+  background: #fde047; /* amber-300 */
+}
+.comment-highlight-resolved {
+  background: #e2e8f0; /* slate-200 */
+  box-shadow: inset 0 -1px 0 #cbd5e1;
+}
+.comment-highlight-resolved:hover {
+  background: #cbd5e1;
+}
+.comment-highlight-active {
+  background: #fbbf24; /* amber-400 */
+  box-shadow: 0 0 0 2px #f59e0b;
+}
+@keyframes comment-flash {
+  0%,
+  100% {
+    background: #fbbf24;
+  }
+  50% {
+    background: #f59e0b;
+  }
+}
+.comment-flash {
+  animation: comment-flash 0.6s ease-in-out 2;
+}
+
+/* 選択時のフローティング「コメントする」ボタン */
+.comment-bubble {
+  position: fixed;
+  z-index: 50;
+  transform: translateX(-50%) translateY(-8px);
+}
