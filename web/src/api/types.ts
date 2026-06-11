@@ -60,3 +60,30 @@ export interface DocumentMeta {
 export interface DocumentFull extends DocumentMeta {
   content: string;
 }
+
+// コメント（mentions は旧仕様のカンマ区切り文字列）。
+export interface Comment {
+  id: string;
+  threadId: string;
+  content: string;
+  author: string;
+  mentions: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deleted: boolean;
+}
+
+// スレッド（アンカー＋非削除コメント同梱）。GET /api/documents/:id/threads。
+export interface Thread {
+  id: string;
+  documentId: string;
+  anchorText: string;
+  anchorBefore: string | null;
+  anchorAfter: string | null;
+  status: "open" | "resolved";
+  createdBy: string;
+  createdAt: string;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  comments: Comment[];
+}
