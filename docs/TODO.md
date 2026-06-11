@@ -117,7 +117,15 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - [x] 通知 UI（`/notifications`・一覧/既読/全既読・文書つきは開いて既読化・サイドバー&ヘッダのバッジ）
 - [x] メンバー管理（`/members`・owner は追加/role変更/削除・member は閲覧のみ・最後の owner 保護はサーバ側）
 - [x] フォルダ・文書の作成 / 取込 / 出力（サイドバーでフォルダ作成・フォルダ画面で改名/削除・新規文書/Markdown取込・エディタで .md エクスポート/削除）
-- [x] 静的配信を本番 Worker に結線（`[assets]` directory=web/dist・not_found_handling=single-page-application・run_worker_first=["/api/*"]。`bun run deploy`=build:web→wrangler deploy。dry-run 検証済み）
+- [x] 静的配信を本番 Worker に結線（`[assets]` directory=web/dist・not_found_handling=single-page-application・run_worker_first=["/api/*","/health"]。`bun run deploy`=build:web→wrangler deploy。本番反映済み）
+
+## F. UX 改善（フィードバック対応）
+- [x] 二次ボタンのホバー明確化／ヘッダのユーザー表示を表示名に統一（メールは title）
+- [x] メンバー画面で owner が表示名をインライン変更（API は owner 限定なので member の自己変更は別途要検討）
+- [x] コメント一覧の既定を「未解決のみ」に（解決済みはトグル）
+- [x] 一覧ビューに進捗表示（ステータス別カウント＋色付きバッジ・`lib/statusColor.ts`）
+- [x] ダークモード（OS追従＋トグル・`lib/theme.ts`/`ThemeToggle`・@custom-variant・全画面 dark: 付与）
+- [ ] （任意）コメントアンカーの一意化強化（同一文字列の取り違え対策）／member 自身の表示名変更を許可する API
 
 ---
 
