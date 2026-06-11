@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
-import type { AppState, DocumentFull, DocumentMeta } from "./types";
+import type { AppState, Comment, DocumentFull, DocumentMeta, Thread } from "./types";
 
 // 起動時ブートストラップ束。401=未ログイン / 403=非メンバー / 200=メンバー。
 export function useAppState() {
@@ -36,6 +36,66 @@ export function useSaveDocument(documentId: string) {
       qc.invalidateQueries({ queryKey: ["document", documentId] });
       qc.invalidateQueries({ queryKey: ["folder-documents"] });
     },
+  });
+}
+
+// ── スレッド / コメント ─────────────────────────────────────────────
+// すべて queryKey ["threads", documentId] を共有し、変更系は同キーを無効化して再取得。
+
+export function useThreads(documentId: string) {
+  return useQuery({
+    queryKey: ["threads", documentId],
+    queryFn: () => api.get<Thread[]>(`/api/documents/${documentId}/threads`),
+  });
+}
+
+export function useCreateThread(documentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      anchorText: string;
+      anchorBefore?: string;
+      anchorAfter?: string;
+      firstComment: string;
+      mentions?: string[];
+    }) => api.post<Thread>(`/api/documents/${documentId}/threads`, vars),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["threads", documentId] }),
+  });
+}
+
+export function useAddReply(documentId: string, threadId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { content: string; mentions?: string[] }) =>
+      api.post<Comment>(`/api/threads/${threadId}/comments`, vars),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["threads", documentId] }),
+  });
+}
+
+// 解決 / 再開（reopen=true で再開エンドポイントへ）。
+export function useSetThreadStatus(documentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { threadId: string; reopen?: boolean }) =>
+      api.post<{ ok: boolean }>(`/api/threads/${vars.threadId}/${vars.reopen ? "reopen" : "resolve"}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["threads", documentId] }),
+  });
+}
+
+export function useEditComment(documentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { commentId: string; content: string }) =>
+      api.patch<Comment>(`/api/comments/${vars.commentId}`, { content: vars.content }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["threads", documentId] }),
+  });
+}
+
+export function useDeleteComment(documentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) => api.delete<{ ok: boolean }>(`/api/comments/${commentId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["threads", documentId] }),
   });
 }
 

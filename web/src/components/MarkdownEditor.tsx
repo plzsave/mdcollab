@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../api/client";
 import { useSaveDocument } from "../api/hooks";
 import { renderMarkdown } from "../lib/markdown";
+import { CommentPanel, type DraftAnchor } from "./CommentPanel";
 import type { DocumentFull } from "../api/types";
 
 type Mode = "edit" | "split" | "preview";
@@ -17,8 +18,31 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
   const [mode, setMode] = useState<Mode>("split");
   const [conflict, setConflict] = useState<number | null>(null);
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const selRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
+  const [showComments, setShowComments] = useState(false);
+  const [draft, setDraft] = useState<DraftAnchor | null>(null);
+
   const dirty = content !== savedContent;
   const html = useMemo(() => renderMarkdown(content), [content]);
+
+  const captureSelection = () => {
+    const ta = textareaRef.current;
+    if (ta) selRef.current = { start: ta.selectionStart, end: ta.selectionEnd };
+  };
+
+  // パネルを開き、本文に選択範囲があれば新規スレッドの下書きアンカーを用意する。
+  const openComments = () => {
+    setShowComments(true);
+    const { start, end } = selRef.current;
+    if (end > start) {
+      setDraft({
+        text: content.slice(start, end),
+        before: content.slice(Math.max(0, start - 40), start),
+        after: content.slice(end, end + 40),
+      });
+    }
+  };
 
   const doSave = (version: number) => {
     setConflict(null);
@@ -50,7 +74,8 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
   };
 
   return (
-    <div className="mx-auto flex h-full max-w-6xl flex-col">
+    <div className="flex h-full gap-4">
+      <div className="flex min-w-0 flex-1 flex-col">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-slate-800">{doc.title}</h1>
@@ -71,6 +96,16 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
               </button>
             ))}
           </div>
+          <button
+            onClick={openComments}
+            className={`rounded-md border px-3 py-1.5 text-sm transition ${
+              showComments
+                ? "border-sky-300 bg-sky-50 text-sky-700"
+                : "border-slate-200 text-slate-500 hover:bg-slate-50"
+            }`}
+          >
+            コメント
+          </button>
           <button
             onClick={() => doSave(baseVersion)}
             disabled={!dirty || save.isPending}
@@ -112,8 +147,10 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
       <div className="mt-4 grid min-h-0 flex-1 gap-4" style={gridCols(mode)}>
         {mode !== "preview" && (
           <textarea
+            ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
+            onSelect={captureSelection}
             spellCheck={false}
             className="h-full min-h-[60vh] w-full resize-none rounded-lg border border-slate-200 bg-white p-4 font-mono text-sm leading-relaxed text-slate-800 focus:border-slate-400 focus:outline-none"
           />
@@ -125,6 +162,16 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
           />
         )}
       </div>
+      </div>
+
+      {showComments && (
+        <CommentPanel
+          documentId={doc.id}
+          draft={draft}
+          onClearDraft={() => setDraft(null)}
+          onClose={() => setShowComments(false)}
+        />
+      )}
     </div>
   );
 }
