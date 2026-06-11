@@ -12,7 +12,9 @@ compatibility_flags = ["nodejs_compat"]
 [assets]
 directory = "web/dist"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*"]
+# /health も Worker が応答すべき監視用エンドポイントなので Worker 優先に含める
+# （含めないと Asset Worker が SPA フォールバックで index.html を返してしまう）。
+run_worker_first = ["/api/*", "/health"]
 
 # Hyperdrive(→Neon)。手順:
 #   1) Neon の接続文字列を用意
