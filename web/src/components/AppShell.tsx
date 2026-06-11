@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import { useCreateFolder, useLogout } from "../api/hooks";
 import { ApiError } from "../api/client";
 import { ThemeToggle } from "./ThemeToggle";
+import { IconBell, IconGear, IconPlus, IconUsers } from "./icons";
 import type { AppState } from "../api/types";
 
 // ログイン済みメンバーの共通レイアウト（左サイドバー: フォルダ一覧 + 上部バー）。
@@ -35,7 +36,7 @@ export function AppShell({ state, children }: { state: AppState; children: React
                 <Link
                   to="/folders/$folderId"
                   params={{ folderId: f.id }}
-                  className="block rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
+                  className="block rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900 dark:[&.active]:bg-slate-800 dark:[&.active]:text-slate-100"
                 >
                   {f.name}
                 </Link>
@@ -48,26 +49,28 @@ export function AppShell({ state, children }: { state: AppState; children: React
         <div className="space-y-0.5 border-t border-slate-200 dark:border-slate-700 px-2 py-2">
           <Link
             to="/notifications"
-            className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
+            className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900 dark:[&.active]:bg-slate-800 dark:[&.active]:text-slate-100"
           >
-            <span>🔔 通知</span>
+            <span className="flex items-center gap-2">
+              <IconBell className="text-slate-400" /> 通知
+            </span>
             {unread > 0 && (
-              <span className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+              <span className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
                 {unread}
               </span>
             )}
           </Link>
           <Link
             to="/members"
-            className="block rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
+            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900 dark:[&.active]:bg-slate-800 dark:[&.active]:text-slate-100"
           >
-            👥 メンバー
+            <IconUsers className="text-slate-400" /> メンバー
           </Link>
           <Link
             to="/settings/ai"
-            className="block rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900"
+            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900 dark:[&.active]:bg-slate-800 dark:[&.active]:text-slate-100"
           >
-            ⚙ AI 設定
+            <IconGear className="text-slate-400" /> AI 設定
           </Link>
         </div>
       </aside>
@@ -94,7 +97,7 @@ export function AppShell({ state, children }: { state: AppState; children: React
             </span>
             <button
               onClick={() => logout.mutate()}
-              className="text-xs text-slate-400 hover:text-slate-700 dark:text-slate-200"
+              className="text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
             >
               ログアウト
             </button>
@@ -127,9 +130,9 @@ function NewFolderForm() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mt-1 w-full rounded-md px-2 py-1.5 text-left text-sm text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:text-slate-300"
+        className="mt-1 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-300"
       >
-        ＋ 新規フォルダ
+        <IconPlus /> 新規フォルダ
       </button>
     );
   }
@@ -155,7 +158,7 @@ function NewFolderForm() {
       <div className="mt-1 flex justify-end gap-2">
         <button
           onClick={() => setOpen(false)}
-          className="text-[11px] text-slate-400 hover:text-slate-700 dark:text-slate-200"
+          className="text-[11px] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
         >
           取消
         </button>

@@ -161,7 +161,7 @@ function MemberRow({
               }}
               className="rounded border border-slate-300 dark:border-slate-600 px-2 py-1 text-sm focus:border-slate-400 focus:outline-none"
             />
-            <button onClick={saveName} className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-100">
+            <button onClick={saveName} className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 dark:text-slate-100">
               保存
             </button>
             <button
@@ -169,7 +169,7 @@ function MemberRow({
                 setNameDraft(member.displayName);
                 setEditingName(false);
               }}
-              className="text-xs text-slate-400 hover:text-slate-700 dark:text-slate-200"
+              className="text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
             >
               取消
             </button>
@@ -184,7 +184,7 @@ function MemberRow({
                   setNameDraft(member.displayName);
                   setEditingName(true);
                 }}
-                className="text-[11px] text-slate-400 hover:text-slate-700 dark:text-slate-200"
+                className="text-[11px] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
               >
                 名前変更
               </button>
