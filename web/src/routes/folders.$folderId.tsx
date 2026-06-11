@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAppState, useFolderDocuments } from "../api/hooks";
 import { StatusBoard } from "../components/StatusBoard";
+import { FolderToolbar } from "../components/FolderToolbar";
 
 export const Route = createFileRoute("/folders/$folderId")({ component: FolderView });
 
@@ -22,32 +23,35 @@ function FolderView() {
 
   return (
     <div className={view === "board" ? "mx-auto max-w-full" : "mx-auto max-w-4xl"}>
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-800">{folder?.name ?? "フォルダ"}</h1>
-        <div className="flex items-center gap-3">
-          {view === "board" && (
-            <label className="flex items-center gap-1.5 text-xs text-slate-500">
-              <input
-                type="checkbox"
-                checked={showArchived}
-                onChange={(e) => setShowArchived(e.target.checked)}
-              />
-              アーカイブも表示
-            </label>
-          )}
-          <div className="flex overflow-hidden rounded-md border border-slate-200 text-xs">
-            {(["list", "board"] as View[]).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`px-3 py-1.5 ${
-                  view === v ? "bg-slate-800 text-white" : "bg-white text-slate-500 hover:bg-slate-50"
-                }`}
-              >
-                {v === "list" ? "一覧" : "ボード"}
-              </button>
-            ))}
-          </div>
+      <FolderToolbar
+        folderId={folderId}
+        folderName={folder?.name ?? "フォルダ"}
+        docCount={docs?.length ?? 0}
+      />
+
+      <div className="mt-3 flex items-center justify-end gap-3">
+        {view === "board" && (
+          <label className="flex items-center gap-1.5 text-xs text-slate-500">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+            />
+            アーカイブも表示
+          </label>
+        )}
+        <div className="flex overflow-hidden rounded-md border border-slate-200 text-xs">
+          {(["list", "board"] as View[]).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`px-3 py-1.5 ${
+                view === v ? "bg-slate-800 text-white" : "bg-white text-slate-500 hover:bg-slate-50"
+              }`}
+            >
+              {v === "list" ? "一覧" : "ボード"}
+            </button>
+          ))}
         </div>
       </div>
 

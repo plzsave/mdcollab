@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { useLogout } from "../api/hooks";
+import { useState, type ReactNode } from "react";
+import { useCreateFolder, useLogout } from "../api/hooks";
+import { ApiError } from "../api/client";
 import type { AppState } from "../api/types";
 
 // ログイン済みメンバーの共通レイアウト（左サイドバー: フォルダ一覧 + 上部バー）。
@@ -37,6 +38,7 @@ export function AppShell({ state, children }: { state: AppState; children: React
               </li>
             ))}
           </ul>
+          <NewFolderForm />
         </nav>
 
         <div className="space-y-0.5 border-t border-slate-200 px-2 py-2">
@@ -93,6 +95,70 @@ export function AppShell({ state, children }: { state: AppState; children: React
         </header>
 
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      </div>
+    </div>
+  );
+}
+
+// サイドバーのフォルダ作成（インライン・成功で入力クリア）。
+function NewFolderForm() {
+  const create = useCreateFolder();
+  const [name, setName] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const submit = () => {
+    if (!name.trim()) return;
+    create.mutate(name.trim(), {
+      onSuccess: () => {
+        setName("");
+        setOpen(false);
+      },
+    });
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="mt-1 w-full rounded-md px-2 py-1.5 text-left text-sm text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+      >
+        ＋ 新規フォルダ
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-1 px-1">
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") submit();
+          if (e.key === "Escape") setOpen(false);
+        }}
+        placeholder="フォルダ名"
+        className="w-full rounded border border-slate-200 px-2 py-1 text-sm focus:border-slate-400 focus:outline-none"
+      />
+      {create.error && (
+        <p className="mt-1 text-[11px] text-red-600">
+          {create.error instanceof ApiError ? create.error.message : "作成に失敗しました"}
+        </p>
+      )}
+      <div className="mt-1 flex justify-end gap-2">
+        <button
+          onClick={() => setOpen(false)}
+          className="text-[11px] text-slate-400 hover:text-slate-700"
+        >
+          取消
+        </button>
+        <button
+          onClick={submit}
+          disabled={!name.trim() || create.isPending}
+          className="rounded bg-slate-800 px-2 py-0.5 text-[11px] text-white hover:bg-slate-700 disabled:opacity-40"
+        >
+          作成
+        </button>
       </div>
     </div>
   );

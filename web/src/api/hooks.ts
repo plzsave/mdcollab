@@ -6,6 +6,7 @@ import type {
   Comment,
   DocumentFull,
   DocumentMeta,
+  Folder,
   Member,
   Notification,
   Review,
@@ -15,6 +16,71 @@ import type {
 // 起動時ブートストラップ束。401=未ログイン / 403=非メンバー / 200=メンバー。
 export function useAppState() {
   return useQuery({ queryKey: ["state"], queryFn: () => api.get<AppState>("/api/state") });
+}
+
+// ── フォルダ作成 / リネーム / 削除（folders は state に含まれるので state 無効化）──
+
+export function useCreateFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => api.post<Folder>("/api/folders", { name }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["state"] }),
+  });
+}
+
+export function useRenameFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { id: string; name: string }) =>
+      api.patch<Folder>(`/api/folders/${vars.id}`, { name: vars.name }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["state"] }),
+  });
+}
+
+export function useDeleteFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ ok: boolean }>(`/api/folders/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["state"] }),
+  });
+}
+
+// ── 文書 作成 / 取込 / 削除 ───────────────────────────────────────────
+
+export function useCreateDocument(folderId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { title: string; content?: string }) =>
+      api.post<DocumentMeta>("/api/documents", { folderId, ...vars }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["folder-documents", folderId] }),
+  });
+}
+
+export interface ImportResult {
+  name: string;
+  ok: boolean;
+  id?: string;
+  docName?: string;
+  error?: string;
+}
+
+export function useImportDocuments(folderId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (files: { name: string; content: string }[]) =>
+      api.post<ImportResult[]>("/api/documents/import", { folderId, files }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["folder-documents", folderId] }),
+  });
+}
+
+export function useDeleteDocument(folderId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ ok: boolean }>(`/api/documents/${id}`),
+    onSuccess: () => {
+      if (folderId) qc.invalidateQueries({ queryKey: ["folder-documents", folderId] });
+    },
+  });
 }
 
 export function useFolderDocuments(folderId: string) {
