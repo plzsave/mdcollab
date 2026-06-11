@@ -4,6 +4,7 @@ import { api, ApiError } from "../api/client";
 import { useSaveDocument } from "../api/hooks";
 import { renderMarkdown } from "../lib/markdown";
 import { CommentPanel, type DraftAnchor } from "./CommentPanel";
+import { AiReviewPanel } from "./AiReviewPanel";
 import type { DocumentFull } from "../api/types";
 
 type Mode = "edit" | "split" | "preview";
@@ -21,6 +22,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const selRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
   const [showComments, setShowComments] = useState(false);
+  const [showReview, setShowReview] = useState(false);
   const [draft, setDraft] = useState<DraftAnchor | null>(null);
 
   const dirty = content !== savedContent;
@@ -33,6 +35,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
 
   // パネルを開き、本文に選択範囲があれば新規スレッドの下書きアンカーを用意する。
   const openComments = () => {
+    setShowReview(false);
     setShowComments(true);
     const { start, end } = selRef.current;
     if (end > start) {
@@ -42,6 +45,11 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
         after: content.slice(end, end + 40),
       });
     }
+  };
+
+  const openReview = () => {
+    setShowComments(false);
+    setShowReview(true);
   };
 
   const doSave = (version: number) => {
@@ -107,6 +115,16 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
             コメント
           </button>
           <button
+            onClick={openReview}
+            className={`rounded-md border px-3 py-1.5 text-sm transition ${
+              showReview
+                ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                : "border-slate-200 text-slate-500 hover:bg-slate-50"
+            }`}
+          >
+            AI レビュー
+          </button>
+          <button
             onClick={() => doSave(baseVersion)}
             disabled={!dirty || save.isPending}
             className="rounded-md bg-slate-800 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-40"
@@ -170,6 +188,14 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
           draft={draft}
           onClearDraft={() => setDraft(null)}
           onClose={() => setShowComments(false)}
+        />
+      )}
+
+      {showReview && (
+        <AiReviewPanel
+          documentId={doc.id}
+          onApplyRevision={(next) => setContent(next)}
+          onClose={() => setShowReview(false)}
         />
       )}
     </div>

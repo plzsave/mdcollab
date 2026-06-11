@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
-import type { AppState, Comment, DocumentFull, DocumentMeta, Thread } from "./types";
+import type {
+  AiSettings,
+  AppState,
+  Comment,
+  DocumentFull,
+  DocumentMeta,
+  Review,
+  Thread,
+} from "./types";
 
 // 起動時ブートストラップ束。401=未ログイン / 403=非メンバー / 200=メンバー。
 export function useAppState() {
@@ -96,6 +104,68 @@ export function useDeleteComment(documentId: string) {
   return useMutation({
     mutationFn: (commentId: string) => api.delete<{ ok: boolean }>(`/api/comments/${commentId}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["threads", documentId] }),
+  });
+}
+
+// ── AI 設定 ─────────────────────────────────────────────────────────
+
+export function useAiSettings() {
+  return useQuery({ queryKey: ["ai-settings"], queryFn: () => api.get<AiSettings>("/api/ai/settings") });
+}
+
+// provider/model 保存（apiKey を含めれば暗号化保存）。返却は最新 settings。
+export function useSaveAiSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { provider: string; model?: string; apiKey?: string }) =>
+      api.put<AiSettings>("/api/ai/settings", vars),
+    onSuccess: (data) => qc.setQueryData(["ai-settings"], data),
+  });
+}
+
+export function useDeleteAiKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (provider: string) => api.delete<AiSettings>(`/api/ai/keys/${provider}`),
+    onSuccess: (data) => qc.setQueryData(["ai-settings"], data),
+  });
+}
+
+export function useSaveGithubRepo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (repo: string) => api.put<AiSettings>("/api/ai/github/repo", { repo }),
+    onSuccess: (data) => qc.setQueryData(["ai-settings"], data),
+  });
+}
+
+// プロバイダの /models 中継（キー保存済みのときのみ enabled）。
+export function useAiModels(provider: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ["ai-models", provider],
+    enabled: enabled && !!provider,
+    staleTime: 5 * 60_000,
+    queryFn: () => api.get<{ models: string[] }>(`/api/ai/models?provider=${provider}`),
+  });
+}
+
+// ── AI レビュー / 改稿 ───────────────────────────────────────────────
+
+export function useReviews(documentId: string) {
+  return useQuery({
+    queryKey: ["reviews", documentId],
+    queryFn: () => api.get<Review[]>(`/api/documents/${documentId}/reviews`),
+  });
+}
+
+// AI 改稿ドラフト生成（全文書き直しを返す。エディタへ反映するかは呼び出し側）。
+export function useCreateRevision(documentId: string) {
+  return useMutation({
+    mutationFn: (vars: { reviewContent?: string; instructions?: string }) =>
+      api.post<{ revised: string; provider: string; model: string; baseVersion: number }>(
+        `/api/documents/${documentId}/revision`,
+        vars,
+      ),
   });
 }
 
