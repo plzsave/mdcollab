@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
-# 個人(Cloudflare)デプロイ。GitHub Actions から呼ばれるが、ロジックはここに集約（§5.2）。
+# 個人(Cloudflare)デプロイの実体。GitHub Actions / ローカルの両方から呼べる単一の入口（§5.2）。
+#   - web(SPA) をビルドして web/dist を作り、wrangler で Worker ＋ [assets] をデプロイ
+#   - 認証は CLOUDFLARE_API_TOKEN（CI が注入 / ローカルは wrangler login でも可）
+# 方針:
+#   - Terraform(apply) はここでは呼ばない（R2/Hyperdrive は手動運用・state はローカル）
+#   - DB migrate もここでは自動化しない（スキーマ変更時に `make migrate` を手動実行）
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-ENV_DIR="infra/envs/mdcollab-cf-personal"
+echo "==> deps (root + web)"
+bun install --frozen-lockfile
+(cd web && bun install --frozen-lockfile)
 
-echo "==> check (typecheck + test)"
-make check
+echo "==> build web (SPA → web/dist)"
+bun run build:web
 
-echo "==> terraform apply ($ENV_DIR)"
-terraform -chdir="$ENV_DIR" init -input=false
-terraform -chdir="$ENV_DIR" apply -auto-approve -input=false
-
-echo "==> db migrate (Neon は公開エンドポイントのため直接実行可)"
-make migrate
-
-echo "==> deploy Workers"
+echo "==> deploy Workers (+ [assets])"
 bunx wrangler deploy
 
-echo "==> smoke test"
-curl -fsS "${BASE_URL:?BASE_URL required}/health" >/dev/null && echo "health OK"
+if [ -n "${BASE_URL:-}" ]; then
+  echo "==> smoke test"
+  curl -fsS "${BASE_URL}/health" >/dev/null && echo "health OK"
+fi
