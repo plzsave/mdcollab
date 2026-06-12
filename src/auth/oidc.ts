@@ -57,14 +57,25 @@ export async function exchangeCode(p: {
   return json.id_token;
 }
 
-export async function verifyIdToken(idToken: string, clientId: string): Promise<GoogleClaims> {
+export async function verifyIdToken(
+  idToken: string,
+  clientId: string,
+  expectedNonce?: string,
+): Promise<GoogleClaims> {
   const { payload } = await jwtVerify(idToken, GOOGLE_JWKS, {
     issuer: GOOGLE_ISS,
     audience: clientId,
   });
-  // TODO(Phase 0): nonce を callback の保存値と突き合わせる
   if (typeof payload.email !== "string" || typeof payload.sub !== "string") {
     throw new Error("invalid id_token claims");
+  }
+  // メール未確認のアカウントは受け付けない（なりすまし防止）。
+  if (payload.email_verified === false) {
+    throw new Error("email not verified");
+  }
+  // nonce を /login で発行した値と突き合わせ（id_token リプレイ防止）。
+  if (expectedNonce !== undefined && payload.nonce !== expectedNonce) {
+    throw new Error("nonce mismatch");
   }
   return {
     sub: payload.sub,

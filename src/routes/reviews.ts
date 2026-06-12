@@ -159,6 +159,10 @@ export function reviewsRoutes(deps: Deps) {
     if (!repo) {
       return c.json({ error: { code: "BAD_REQUEST", message: "github repo not configured" } }, 400);
     }
+    // owner/name 形式のみ許可（GitHub URL へのパス混入を防ぐ）。
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) {
+      return c.json({ error: { code: "BAD_REQUEST", message: "invalid repo format" } }, 400);
+    }
     // PAT があればリポジトリ本体（説明/README）を取得してプロンプトに添える。
     // PAT 未設定や取得失敗時はリポジトリ名のみ（fetchRepoContext は throw しない設計）。
     const pat = await loadGithubPat(deps, email);

@@ -1,0 +1,7 @@
+# Cloudflare Workers Assets が解釈するレスポンスヘッダ（vite が dist 直下へコピー）。
+# SPA(HTML/JS/CSS) のレスポンスにセキュリティヘッダを付与する。/api/* は Worker 側なので対象外。
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
