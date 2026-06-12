@@ -4,6 +4,7 @@ import type { Deps } from "../env";
 import { requireMember, type Vars } from "../auth/middleware";
 import { aiKeys, aiSettings } from "../db/schema";
 import { encryptSecret, decryptSecret } from "../crypto";
+import { loadAiSettings, GITHUB_PREFIX } from "../ai/settings";
 
 // AI 設定 / 秘密（すべて本人のみ）。**キー平文はクライアントへ返さない**不変条件（§6.5）。
 //   GET    /api/ai/settings          ≈ getAiSettings（has-key 真偽のみ）
@@ -14,34 +15,7 @@ import { encryptSecret, decryptSecret } from "../crypto";
 //   PUT    /api/ai/github/repo       ≈ saveGithubRepo
 //   GET    /api/ai/models?provider=  ≈ listAiModels（プロバイダ /models 中継）
 
-const GITHUB_PREFIX = "github:";
-
-// 本人の設定ビューを組み立てる（秘密は真偽/スコープのみ・平文は絶対に含めない）。
-async function loadSettings(deps: Deps, email: string) {
-  const [settingsRow] = await deps.db
-    .select()
-    .from(aiSettings)
-    .where(eq(aiSettings.email, email))
-    .limit(1);
-  const keyRows = await deps.db.select().from(aiKeys).where(eq(aiKeys.email, email));
-
-  const keys: Record<string, boolean> = {};
-  const githubPats: string[] = [];
-  for (const k of keyRows) {
-    if (k.provider.startsWith(GITHUB_PREFIX)) {
-      githubPats.push(k.provider.slice(GITHUB_PREFIX.length));
-    } else {
-      keys[k.provider] = true;
-    }
-  }
-  return {
-    provider: settingsRow?.provider ?? null,
-    model: settingsRow?.model ?? null,
-    githubRepo: settingsRow?.githubRepo ?? null,
-    keys,
-    githubPats,
-  };
-}
+// 設定ビュー組み立ては src/ai/settings.ts の loadAiSettings に集約（state ルートと共有）。
 
 // ai_settings を部分更新（read-merge-write で null 上書きを避ける）。
 async function upsertSettings(
@@ -79,7 +53,7 @@ export function aiRoutes(deps: Deps) {
   app.use("*", requireMember(deps));
 
   app.get("/settings", async (c) => {
-    return c.json(await loadSettings(deps, c.get("email")));
+    return c.json(await loadAiSettings(deps, c.get("email")));
   });
 
   app.put("/settings", async (c) => {
@@ -94,7 +68,7 @@ export function aiRoutes(deps: Deps) {
     if (typeof body.apiKey === "string" && body.apiKey.length > 0) {
       await upsertKey(deps, email, body.provider, body.apiKey);
     }
-    return c.json(await loadSettings(deps, email));
+    return c.json(await loadAiSettings(deps, email));
   });
 
   app.delete("/keys/:provider", async (c) => {
@@ -103,7 +77,7 @@ export function aiRoutes(deps: Deps) {
     await deps.db
       .delete(aiKeys)
       .where(and(eq(aiKeys.email, email), eq(aiKeys.provider, provider)));
-    return c.json(await loadSettings(deps, email));
+    return c.json(await loadAiSettings(deps, email));
   });
 
   app.put("/github/pat", async (c) => {
@@ -115,7 +89,7 @@ export function aiRoutes(deps: Deps) {
       return c.json({ error: { code: "BAD_REQUEST", message: "scope and pat required" } }, 400);
     }
     await upsertKey(deps, email, `${GITHUB_PREFIX}${body.scope}`, body.pat);
-    return c.json(await loadSettings(deps, email));
+    return c.json(await loadAiSettings(deps, email));
   });
 
   app.delete("/github/pat", async (c) => {
@@ -127,7 +101,7 @@ export function aiRoutes(deps: Deps) {
     await deps.db
       .delete(aiKeys)
       .where(and(eq(aiKeys.email, email), eq(aiKeys.provider, `${GITHUB_PREFIX}${scope}`)));
-    return c.json(await loadSettings(deps, email));
+    return c.json(await loadAiSettings(deps, email));
   });
 
   app.put("/github/repo", async (c) => {
@@ -137,7 +111,7 @@ export function aiRoutes(deps: Deps) {
       return c.json({ error: { code: "BAD_REQUEST", message: "repo required" } }, 400);
     }
     await upsertSettings(deps, email, { githubRepo: body.repo });
-    return c.json(await loadSettings(deps, email));
+    return c.json(await loadAiSettings(deps, email));
   });
 
   app.get("/models", async (c) => {

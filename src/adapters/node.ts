@@ -3,6 +3,7 @@ import { createApp } from "../app";
 import { createDb } from "../db/client";
 import { createStore } from "../storage";
 import { createLlmClient } from "../llm/providers";
+import { createGithubClient } from "../github/client";
 import type { AppConfig } from "../env";
 
 // ローカル開発 / 職場 AWS(Fargate/App Runner)用 Node エントリ。
@@ -41,7 +42,7 @@ const config: AppConfig = {
   devAuth,
 };
 
-const app = createApp({ db, store, llm: createLlmClient(), config });
+const app = createApp({ db, store, llm: createLlmClient(), github: createGithubClient(), config });
 const port = Number(process.env.PORT ?? 8787);
 serve({ fetch: app.fetch, port });
 // eslint-disable-next-line no-console

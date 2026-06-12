@@ -12,6 +12,7 @@ import { SESSION_COOKIE } from "../../src/auth/middleware";
 import type { Database } from "../../src/db/client";
 import type { DocumentStore } from "../../src/storage/types";
 import type { LlmClient, LlmInput } from "../../src/llm/types";
+import type { GithubClient } from "../../src/github/types";
 import type { AppConfig, Deps } from "../../src/env";
 
 const TEST_SECRET = "test-secret";
@@ -33,6 +34,18 @@ export function makeFakeLlm(): LlmClient & { calls: LlmInput[] } {
     },
     async listModels(provider) {
       return [`${provider}-model-a`, `${provider}-model-b`];
+    },
+  };
+}
+
+/** ネットワーク不要の fake GithubClient。最後の (repo, pat) を記録し固定文脈を返す。 */
+export function makeFakeGithub(): GithubClient & { calls: { repo: string; pat: string }[] } {
+  const calls: { repo: string; pat: string }[] = [];
+  return {
+    calls,
+    async fetchRepoContext(repo, pat) {
+      calls.push({ repo, pat });
+      return `リポジトリ: ${repo}\n\n# README（抜粋）\nFAKE-README of ${repo}`;
     },
   };
 }
@@ -71,6 +84,7 @@ export interface Harness {
   db: Database;
   store: ReturnType<typeof makeMemoryStore>;
   llm: ReturnType<typeof makeFakeLlm>;
+  github: ReturnType<typeof makeFakeGithub>;
   config: AppConfig;
   app: ReturnType<typeof createApp>;
   /** email 用の Cookie ヘッダ値（"mdcollab_session=..."）を発行 */
@@ -83,13 +97,14 @@ export async function makeHarness(): Promise<Harness> {
   const db = await makeTestDb();
   const store = makeMemoryStore();
   const llm = makeFakeLlm();
+  const github = makeFakeGithub();
   const config: AppConfig = {
     baseUrl: "http://localhost",
     sessionSecret: TEST_SECRET,
     encryptionKey: "test-encryption-key",
     google: { clientId: "x", clientSecret: "x" },
   };
-  const deps: Deps = { db, store, llm, config };
+  const deps: Deps = { db, store, llm, github, config };
   const app = createApp(deps);
 
   async function cookie(email: string, name?: string) {
@@ -105,7 +120,7 @@ export async function makeHarness(): Promise<Harness> {
     return app.request(path, { ...rest, headers: h });
   }
 
-  return { db, store, llm, config, app, cookie, req };
+  return { db, store, llm, github, config, app, cookie, req };
 }
 
 /** members に1行入れるショートカット。テストの前提作りに使う。 */

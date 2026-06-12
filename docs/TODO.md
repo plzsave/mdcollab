@@ -84,9 +84,9 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - [x] 通知の**副作用発火**（mention / reply / resolve）— `src/notify.ts` に集約。メンバーのみ通知・actor 除外・mention と reply は二重にしない
 - [x] AI レビューの **SSE ストリーミング**（`hono/streaming` の `streamSSE`・`?stream=1`）
 - [x] **AI プロバイダ呼び出し層**（`src/llm/`・anthropic/openai の実 HTTP。Deps に注入＝テストは fake）
-- [ ] **`DriveStorage` 実装**（`src/storage/drive.ts` は現状 stub。方針(B)ハイブリッド用）
-- [ ] GitHub リポジトリ本体取得（review-repo の深掘り・PAT 使用）
-- [ ] `getAppState` の完成（`aiSettings` 等の束ね込み漏れを解消）
+- [x] ~~**`DriveStorage` 実装**~~ → **退役**（方針A=全移行で R2 のみ採用。ハイブリッド(B)前提が消えたため不要・stub は残置可）
+- [x] GitHub リポジトリ本体取得（review-repo の深掘り）— `src/github/`（Deps 注入・テストは fake）。PAT(github:default 優先) で説明+README を取得しプロンプトに添える。失敗時は repo 名のみにフォールバック
+- [x] `getAppState` の完成 — `/api/state` に `aiSettings` を束ね込み（`src/ai/settings.ts` に共有化・平文キー非含）。フロントは `useAiSettings` の initialData に活用し初回往復を削減
 
 ---
 
@@ -135,7 +135,7 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - [x] テスト基盤（pglite + メモリストア + 署名クッキーのハーネス・`test/helpers/harness.ts`）
 - [x] テスト拡充（全ルートに結合テスト・計81本。threads/comments・notifications・ai・reviews も網羅）
 - [x] 認可マトリクス（`test/authz.test.ts`: 代表11エンドポイントの未ログイン401/非メンバー403・著者のみ削除403・AI秘密のユーザー間分離）
-- [~] エラー形式・入力バリデーションの統一（エラー封筒 `{error:{code,message}}` を 400/404/409/401/403 で検証済。入力境界値の網羅は今後）
+- [x] エラー形式・入力バリデーションの統一（エラー封筒 `{error:{code,message}}` を 401/403/400/404/409 で検証。`test/validation.test.ts`: 壊れた JSON/必須欠落/空パッチ等で 500 にせず 400 を返すことを代表7ケースで保証）
 
 ---
 

@@ -35,4 +35,21 @@ describe("GET /api/state", () => {
     // 自分宛(n1)だけ
     expect(body.notifications.map((n) => n.id)).toEqual(["n1"]);
   });
+
+  it("aiSettings を束ね込み・平文キーは含まない", async () => {
+    const h = await makeHarness();
+    await seedMember(h, "u@example.com", "member");
+    await h.req("/api/ai/settings", {
+      as: "u@example.com",
+      method: "PUT",
+      body: JSON.stringify({ provider: "anthropic", model: "m", apiKey: "sk-bundle-secret" }),
+    });
+
+    const body = (await (await h.req("/api/state", { as: "u@example.com" })).json()) as {
+      aiSettings: { provider: string | null; keys: Record<string, boolean> };
+    };
+    expect(body.aiSettings).toMatchObject({ provider: "anthropic", keys: { anthropic: true } });
+    // 平文キーは state にも漏れない
+    expect(JSON.stringify(body)).not.toContain("sk-bundle-secret");
+  });
 });

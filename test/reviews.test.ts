@@ -119,6 +119,32 @@ describe("AI Review / Revision", () => {
     expect(await res.json()).toMatchObject({ repo: "owner/repo" });
   });
 
+  it("review-repo: PAT があればリポジトリ本体(README)を取得しプロンプトに含める", async () => {
+    const h = await setup();
+    await h.req("/api/ai/github/repo", {
+      as: "u@example.com",
+      method: "PUT",
+      body: JSON.stringify({ repo: "owner/repo" }),
+    });
+    await h.req("/api/ai/github/pat", {
+      as: "u@example.com",
+      method: "PUT",
+      body: JSON.stringify({ scope: "default", pat: "ghp_secret" }),
+    });
+
+    const res = await h.req("/api/documents/d1/review-repo", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({ instructions: "見て" }),
+    });
+    expect(res.status).toBe(200);
+
+    // fake GitHub が repo と復号済み PAT を受け取り、取得本文が LLM プロンプトに入る
+    expect(h.github.calls).toEqual([{ repo: "owner/repo", pat: "ghp_secret" }]);
+    const prompt = h.llm.calls.at(-1)!.prompt;
+    expect(prompt).toContain("FAKE-README of owner/repo");
+  });
+
   it("revision: doc×user で1件に upsert・delete で消える", async () => {
     const h = await setup();
     await h.req("/api/documents/d1/revision", {
