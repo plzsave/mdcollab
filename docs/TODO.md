@@ -133,9 +133,9 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 
 ## E. 品質
 - [x] テスト基盤（pglite + メモリストア + 署名クッキーのハーネス・`test/helpers/harness.ts`）
-- [~] テスト拡充（state/folders/documents/statuses/members は済。残りルートは実装と並走で追加）
-- [~] 認可マトリクス（owner / member は statuses/members で検証済。著者・本人宛は未）
-- [ ] エラー形式・入力バリデーションの統一
+- [x] テスト拡充（全ルートに結合テスト・計81本。threads/comments・notifications・ai・reviews も網羅）
+- [x] 認可マトリクス（`test/authz.test.ts`: 代表11エンドポイントの未ログイン401/非メンバー403・著者のみ削除403・AI秘密のユーザー間分離）
+- [~] エラー形式・入力バリデーションの統一（エラー封筒 `{error:{code,message}}` を 400/404/409/401/403 で検証済。入力境界値の網羅は今後）
 
 ---
 
