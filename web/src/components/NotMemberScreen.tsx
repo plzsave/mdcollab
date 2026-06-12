@@ -31,7 +31,7 @@ export function NotMemberScreen() {
         <button
           onClick={() => setup.mutate()}
           disabled={setup.isPending}
-          className="mt-6 w-full rounded-lg bg-slate-800 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
+          className="mt-6 w-full rounded-lg bg-slate-800 dark:bg-slate-700 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-50"
         >
           {setup.isPending ? "セットアップ中…" : "初回セットアップ（自分を owner にする）"}
         </button>

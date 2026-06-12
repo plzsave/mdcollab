@@ -48,7 +48,7 @@ function FolderView() {
               key={v}
               onClick={() => setView(v)}
               className={`px-3 py-1.5 ${
-                view === v ? "bg-slate-800 text-white" : "bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800"
+                view === v ? "bg-slate-800 dark:bg-slate-700 text-white" : "bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800"
               }`}
             >
               {v === "list" ? "一覧" : "ボード"}

@@ -108,7 +108,7 @@ function AddMemberForm() {
         <button
           onClick={submit}
           disabled={!email.trim() || !displayName.trim() || add.isPending}
-          className="rounded-md bg-slate-800 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-40"
+          className="rounded-md bg-slate-800 dark:bg-slate-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-40"
         >
           {add.isPending ? "追加中…" : "追加"}
         </button>
@@ -178,7 +178,7 @@ function MemberRow({
           <div className="flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-100">
             <span className="truncate">{member.displayName}</span>
             {isSelf && <span className="text-xs text-slate-400">(自分)</span>}
-            {isOwner && (
+            {(isOwner || isSelf) && (
               <button
                 onClick={() => {
                   setNameDraft(member.displayName);

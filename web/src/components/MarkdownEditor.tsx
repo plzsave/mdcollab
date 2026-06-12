@@ -200,7 +200,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
                   key={m}
                   onClick={() => setMode(m)}
                   className={`px-3 py-1.5 ${
-                    mode === m ? "bg-slate-800 text-white" : "bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    mode === m ? "bg-slate-800 dark:bg-slate-700 text-white" : "bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   {m === "edit" ? "編集" : m === "split" ? "分割" : "プレビュー"}
@@ -230,7 +230,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
             <button
               onClick={() => doSave(baseVersion)}
               disabled={!dirty || save.isPending}
-              className="rounded-md bg-slate-800 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-40"
+              className="rounded-md bg-slate-800 dark:bg-slate-700 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-40"
             >
               {save.isPending ? "保存中…" : "保存"}
             </button>
@@ -307,7 +307,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
         <button
           onMouseDown={(e) => e.preventDefault()} // 選択を保持したままクリック
           onClick={startThreadFromSelection}
-          className="comment-bubble flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white shadow-lg hover:bg-slate-700"
+          className="comment-bubble flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white shadow-lg hover:bg-slate-700 dark:hover:bg-slate-600"
           style={{ left: bubble.x, top: bubble.y }}
         >
           <IconChat width={14} height={14} /> コメント

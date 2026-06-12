@@ -43,11 +43,25 @@ export function membersRoutes(deps: Deps) {
     return c.json(rows[0], 201);
   });
 
-  app.patch("/:email", requireOwner(), async (c) => {
+  // 表示名は本人も変更可。role 変更・他人の更新は owner のみ（requireOwner をハンドラ内検査に展開）。
+  app.patch("/:email", async (c) => {
+    const actor = c.get("email");
+    const isOwner = c.get("role") === "owner";
     const email = c.req.param("email");
+    const isSelf = email === actor;
+
+    if (!isOwner && !isSelf) {
+      return c.json({ error: { code: "FORBIDDEN", message: "owner or self only" } }, 403);
+    }
+
     const body = await c.req
       .json<{ displayName?: string; role?: string }>()
       .catch(() => ({}) as { displayName?: string; role?: string });
+
+    // role 変更は owner のみ（本人でも自分を昇格できない）。
+    if ((body.role === "owner" || body.role === "member") && !isOwner) {
+      return c.json({ error: { code: "FORBIDDEN", message: "role change requires owner" } }, 403);
+    }
 
     const rows = await deps.db.select().from(members).where(eq(members.email, email)).limit(1);
     const target = rows[0];

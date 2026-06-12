@@ -141,7 +141,7 @@ function AiSettingsView() {
           <button
             onClick={onSave}
             disabled={save.isPending}
-            className="rounded-md bg-slate-800 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-40"
+            className="rounded-md bg-slate-800 dark:bg-slate-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-40"
           >
             {save.isPending ? "保存中…" : "保存"}
           </button>
