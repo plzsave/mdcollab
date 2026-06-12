@@ -7,7 +7,7 @@ resource "cloudflare_hyperdrive_config" "neon" {
   name       = "mdcollab-neon"
 
   origin = {
-    scheme   = "postgres"
+    scheme   = "postgresql" # 実態に合わせる（Hyperdrive 側の保存値）
     database = "neondb"
     host     = "ep-lingering-dust-ao4eeoel-pooler.c-2.ap-southeast-1.aws.neon.tech"
     port     = 5432
