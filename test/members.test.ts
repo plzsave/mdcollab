@@ -72,6 +72,43 @@ describe("/api/members", () => {
     expect(await res.json()).toMatchObject({ displayName: "Renamed", role: "owner" });
   });
 
+  it("member は自分の displayName 変更可・role 変更は403・他人更新は403（C2）", async () => {
+    const h = await makeHarness();
+    await seedMember(h, "o@example.com", "owner");
+    await seedMember(h, "m@example.com", "member", "Old");
+
+    // 自分の表示名変更はOK
+    const self = await h.req("/api/members/m@example.com", {
+      as: "m@example.com",
+      method: "PATCH",
+      body: JSON.stringify({ displayName: "New" }),
+    });
+    expect(self.status).toBe(200);
+    expect(await self.json()).toMatchObject({ displayName: "New" });
+
+    // 自分でも role 昇格は 403（owner 限定）
+    expect(
+      (
+        await h.req("/api/members/m@example.com", {
+          as: "m@example.com",
+          method: "PATCH",
+          body: JSON.stringify({ role: "owner" }),
+        })
+      ).status,
+    ).toBe(403);
+
+    // 他人の更新は 403
+    expect(
+      (
+        await h.req("/api/members/o@example.com", {
+          as: "m@example.com",
+          method: "PATCH",
+          body: JSON.stringify({ displayName: "X" }),
+        })
+      ).status,
+    ).toBe(403);
+  });
+
   it("PATCH 対象なしは 404 / 変更なしは 400", async () => {
     const h = await makeHarness();
     await seedMember(h, "o@example.com", "owner");

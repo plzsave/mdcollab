@@ -165,7 +165,7 @@ function NewFolderForm() {
         <button
           onClick={submit}
           disabled={!name.trim() || create.isPending}
-          className="rounded bg-slate-800 px-2 py-0.5 text-[11px] text-white hover:bg-slate-700 disabled:opacity-40"
+          className="rounded bg-slate-800 dark:bg-slate-700 px-2 py-0.5 text-[11px] text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-40"
         >
           作成
         </button>

@@ -128,7 +128,7 @@ export function FolderToolbar({
       <div className="flex items-center gap-2">
         <button
           onClick={() => setCreating((v) => !v)}
-          className="rounded-md bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+          className="rounded-md bg-slate-800 dark:bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 dark:hover:bg-slate-600"
         >
           新規文書
         </button>
@@ -165,7 +165,7 @@ export function FolderToolbar({
           <button
             onClick={submitCreate}
             disabled={!title.trim() || createDoc.isPending}
-            className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
+            className="rounded bg-slate-800 dark:bg-slate-700 px-3 py-1.5 text-sm text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-40"
           >
             作成して開く
           </button>

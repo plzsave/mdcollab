@@ -292,7 +292,7 @@ function ThreadCard({
           <button
             onClick={submitReply}
             disabled={!replyText.trim() || reply.isPending}
-            className="rounded bg-slate-800 px-3 py-1 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-40"
+            className="rounded bg-slate-800 dark:bg-slate-700 px-3 py-1 text-xs font-medium text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-40"
           >
             返信
           </button>
@@ -360,7 +360,7 @@ function CommentItem({
             <button
               onClick={saveEdit}
               disabled={editMut.isPending}
-              className="rounded bg-slate-800 px-2 py-0.5 text-xs text-white hover:bg-slate-700 disabled:opacity-40"
+              className="rounded bg-slate-800 dark:bg-slate-700 px-2 py-0.5 text-xs text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-40"
             >
               保存
             </button>
@@ -443,7 +443,7 @@ function MentionPicker({
 
 function AnchorQuote({ text }: { text: string }) {
   return (
-    <blockquote className="border-l-2 border-amber-300 bg-amber-50/60 px-2 py-1 text-xs italic text-slate-500">
+    <blockquote className="border-l-2 border-amber-300 bg-amber-50/60 px-2 py-1 text-xs italic text-slate-500 dark:border-amber-600 dark:bg-amber-950/40 dark:text-slate-300">
       {text.length > 120 ? text.slice(0, 120) + "…" : text}
     </blockquote>
   );

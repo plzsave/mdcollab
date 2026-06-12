@@ -127,7 +127,9 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - [x] コメント一覧の既定を「未解決のみ」に（解決済みはトグル）
 - [x] 一覧ビューに進捗表示（ステータス別カウント＋色付きバッジ・`lib/statusColor.ts`）
 - [x] ダークモード（OS追従＋トグル・`lib/theme.ts`/`ThemeToggle`・@custom-variant・全画面 dark: 付与）
-- [ ] （任意）コメントアンカーの一意化強化（同一文字列の取り違え対策）／member 自身の表示名変更を許可する API
+- [x] コメントアンカーの一意化（軽量版・`web/src/lib/highlight.ts`: anchorBefore/After の前後一致でスコアリングし最良の出現を採用。編集追従はしない）
+- [x] member 自身の表示名変更（`PATCH /api/members/:email` を「自分 or owner」許可・role 変更は owner 限定。フロントは自分にも「名前変更」表示）
+- [x] ダーク UI 改善（primary ボタンを `dark:bg-slate-700` で面より浮かせる／コメント引用 blockquote のダーク可読性）
 
 ---
 
