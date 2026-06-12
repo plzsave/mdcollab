@@ -20,10 +20,26 @@ export interface WorkerEnv {
   GOOGLE_CLIENT_SECRET: string;
   BASE_URL: string;
   ALLOWED_DOMAIN?: string;
+  // Workers ネイティブ レート制限バインディング（wrangler.toml の [[ratelimits]]）。
+  AUTH_LIMITER?: { limit(opts: { key: string }): Promise<{ success: boolean }> };
 }
 
 export default {
   async fetch(request: Request, env: WorkerEnv, ctx: ExecutionContext): Promise<Response> {
+    // /api/auth/* を IP 単位でレート制限（ログイン連打・コスト保護）。
+    // バインディング欠落時はフェイルオープン（締め出しより可用性を優先）。
+    const url = new URL(request.url);
+    if (env.AUTH_LIMITER && url.pathname.startsWith("/api/auth/")) {
+      const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
+      const { success } = await env.AUTH_LIMITER.limit({ key: ip });
+      if (!success) {
+        return new Response(
+          JSON.stringify({ error: { code: "RATE_LIMITED", message: "too many requests" } }),
+          { status: 429, headers: { "content-type": "application/json", "retry-after": "60" } },
+        );
+      }
+    }
+
     const db = createDb(env.HYPERDRIVE.connectionString);
     const store = createStore({
       backend: "s3",
