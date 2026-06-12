@@ -141,6 +141,25 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 
 ---
 
+## G. セキュリティレビュー（2026-06-12 実施）
+本格レビュー実施。観点別に精査し、安価で効くものは即修正・残りはリスク受容を明記。
+
+**是正済み:**
+- [x] OIDC nonce 検証（id_token リプレイ防止）＋ `email_verified` 必須化＋認証失敗を汎用 400 に（詳細非露出）
+- [x] `app.onError` 追加（未処理例外はログのみ・client へは `{error:{code:INTERNAL}}`）
+- [x] SPA セキュリティヘッダ（`web/public/_headers`: nosniff / X-Frame-Options:DENY / Referrer-Policy / Permissions-Policy）本番反映確認済み
+- [x] review-repo の repo を `owner/name` 形式に限定（GitHub URL へのパス混入防止）
+
+**問題なし（確認済み）:** 署名セッション(HS256・alg 固定)・httpOnly/Secure/SameSite=Lax・OAuth state(CSRF)・dev-login 本番無効・members 認可マトリクス・AES-GCM 暗号化(平文非返却)・SQL パラメータ化・ストレージキーは UUID・HTML は DOMPurify・PAT はホスト固定送信。
+
+**リスク受容 / 後回し（要時に対応）:**
+- [ ] アプリ層レート制限なし（緩和: CF edge DDoS・members ゲート・OAuth Testing）。要なら CF WAF レート制限ルールを `/api/auth/*`・`/review*` に
+- [ ] 入力サイズ上限（本文/コメント等）未設定（Workers が ~100MB で頭打ち・members 限定）
+- [ ] CSP 未導入（index.html のインラインテーマ script に nonce/hash が要るため保留・X-Frame-Options で当面のクリックジャッキングは防御）
+- [ ] esbuild moderate advisory（dev 専用の推移依存・本番無関係・上流更新待ち）
+
+---
+
 ## 着手順（方針: バックエンド API を完成させてから区切り、その後フロントへ）
 
 決定（2026-06-10）: **バックエンド完成で一旦区切ってからフロント着手**。フロントは GAS 版の素 HTML を
