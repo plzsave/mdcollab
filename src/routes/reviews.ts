@@ -51,9 +51,25 @@ async function loadDocContent(deps: Deps, id: string) {
   return { doc, content };
 }
 
-function reviewPrompt(content: string, instructions: string, repo?: string): string {
+function reviewPrompt(
+  content: string,
+  instructions: string,
+  repo?: string,
+  repoContext?: string,
+): string {
   const repoLine = repo ? `\n# 参照リポジトリ\n${repo}\n` : "";
-  return `次の Markdown 文書をレビューし、改善点を具体的に指摘してください。${repoLine}\n# 指示\n${instructions || "(特になし)"}\n\n# 文書\n${content}`;
+  // PAT で取得したリポジトリ本体（説明/README）があればプロンプトに添える。
+  const repoCtx = repoContext ? `\n# リポジトリの内容\n${repoContext}\n` : "";
+  return `次の Markdown 文書をレビューし、改善点を具体的に指摘してください。${repoLine}${repoCtx}\n# 指示\n${instructions || "(特になし)"}\n\n# 文書\n${content}`;
+}
+
+// 本人の GitHub PAT を1つ取り出す（github:default を優先・無ければ先頭）。無ければ null。
+async function loadGithubPat(deps: Deps, email: string): Promise<string | null> {
+  const rows = await deps.db.select().from(aiKeys).where(eq(aiKeys.email, email));
+  const gh = rows.filter((r) => r.provider.startsWith("github:"));
+  if (gh.length === 0) return null;
+  const pick = gh.find((r) => r.provider === "github:default") ?? gh[0]!;
+  return decryptSecret(pick.encryptedKey, deps.config.encryptionKey);
 }
 
 const REVIEW_SYSTEM = "あなたは丁寧で具体的なテクニカルライティングのレビュアーです。";
@@ -68,7 +84,7 @@ export function reviewsRoutes(deps: Deps) {
   app.use("*", requireMember(deps));
 
   // レビュー本体（review / review-repo 共用）。stream 指定時は SSE、それ以外は JSON。
-  async function runReview(c: Ctx, opts: { repo?: string }) {
+  async function runReview(c: Ctx, opts: { repo?: string; repoContext?: string }) {
     const id = c.req.param("id")!;
     const email = c.get("email");
     const body = await c.req
@@ -85,7 +101,7 @@ export function reviewsRoutes(deps: Deps) {
       model: cfg.model,
       apiKey: cfg.apiKey,
       system: REVIEW_SYSTEM,
-      prompt: reviewPrompt(loaded.content, body.instructions ?? "", opts.repo),
+      prompt: reviewPrompt(loaded.content, body.instructions ?? "", opts.repo, opts.repoContext),
     };
 
     const persist = async (text: string) => {
@@ -143,9 +159,11 @@ export function reviewsRoutes(deps: Deps) {
     if (!repo) {
       return c.json({ error: { code: "BAD_REQUEST", message: "github repo not configured" } }, 400);
     }
-    // NOTE: 現状はリポジトリ参照をプロンプトに含めるのみ。リポジトリ本体の取得（README/コード）は
-    // GitHub PAT を使った follow-up（横断B の GitHub クライアント実装）で対応する。
-    return runReview(c, { repo });
+    // PAT があればリポジトリ本体（説明/README）を取得してプロンプトに添える。
+    // PAT 未設定や取得失敗時はリポジトリ名のみ（fetchRepoContext は throw しない設計）。
+    const pat = await loadGithubPat(deps, email);
+    const repoContext = pat ? await deps.github.fetchRepoContext(repo, pat) : undefined;
+    return runReview(c, { repo, repoContext });
   });
 
   app.get("/documents/:id/reviews", async (c) => {

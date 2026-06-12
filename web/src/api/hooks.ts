@@ -199,7 +199,13 @@ export function useDeleteComment(documentId: string) {
 // ── AI 設定 ─────────────────────────────────────────────────────────
 
 export function useAiSettings() {
-  return useQuery({ queryKey: ["ai-settings"], queryFn: () => api.get<AiSettings>("/api/ai/settings") });
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: ["ai-settings"],
+    queryFn: () => api.get<AiSettings>("/api/ai/settings"),
+    // /api/state に束ねた aiSettings を初期値に使い、初回の往復をスキップ（背景で再取得）。
+    initialData: () => qc.getQueryData<AppState>(["state"])?.aiSettings,
+  });
 }
 
 // provider/model 保存（apiKey を含めれば暗号化保存）。返却は最新 settings。

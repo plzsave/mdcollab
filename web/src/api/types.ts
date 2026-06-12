@@ -42,6 +42,7 @@ export interface AppState {
   folders: Folder[];
   statuses: Status[];
   notifications: Notification[];
+  aiSettings: AiSettings; // /api/state に束ね込み済み（往復削減）
 }
 
 // 本文なしの軽量メタ（GET /api/folders/:id/documents）。
