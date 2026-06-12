@@ -18,6 +18,12 @@ import { setupRoutes } from "./routes/setup";
 export function createApp(deps: Deps) {
   const app = new Hono<{ Variables: Vars }>();
 
+  // 未処理例外はログのみに留め、クライアントには内部情報を出さない汎用エラーを返す。
+  app.onError((err, c) => {
+    console.error("[unhandled]", err);
+    return c.json({ error: { code: "INTERNAL", message: "internal error" } }, 500);
+  });
+
   app.get("/health", (c) => c.json({ ok: true }));
 
   app.use("*", sessionMiddleware(deps));

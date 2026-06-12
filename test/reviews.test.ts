@@ -119,6 +119,17 @@ describe("AI Review / Revision", () => {
     expect(await res.json()).toMatchObject({ repo: "owner/repo" });
   });
 
+  it("review-repo: 不正な repo 形式は 400（パス混入防止）", async () => {
+    const h = await setup();
+    const res = await h.req("/api/documents/d1/review-repo", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({ repoOverride: "../../etc/passwd" }),
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: { code: "BAD_REQUEST" } });
+  });
+
   it("review-repo: PAT があればリポジトリ本体(README)を取得しプロンプトに含める", async () => {
     const h = await setup();
     await h.req("/api/ai/github/repo", {

@@ -31,13 +31,21 @@ export function authRoutes(deps: Deps) {
     if (!code || !state || state !== getCookie(c, "oidc_state")) {
       return c.json({ error: { code: "BAD_REQUEST", message: "invalid oauth state" } }, 400);
     }
-    const idToken = await exchangeCode({
-      code,
-      clientId: deps.config.google.clientId,
-      clientSecret: deps.config.google.clientSecret,
-      redirectUri,
-    });
-    const claims = await verifyIdToken(idToken, deps.config.google.clientId);
+    const nonce = getCookie(c, "oidc_nonce");
+
+    // code 交換と id_token 検証（nonce 含む）は失敗時に詳細を露出せず 400 を返す。
+    let claims;
+    try {
+      const idToken = await exchangeCode({
+        code,
+        clientId: deps.config.google.clientId,
+        clientSecret: deps.config.google.clientSecret,
+        redirectUri,
+      });
+      claims = await verifyIdToken(idToken, deps.config.google.clientId, nonce);
+    } catch {
+      return c.json({ error: { code: "BAD_REQUEST", message: "authentication failed" } }, 400);
+    }
 
     // §7.2 入口の粗いフィルタ（正の認可は members）
     if (deps.config.allowedDomain && claims.hd !== deps.config.allowedDomain) {
