@@ -96,13 +96,10 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - [x] **Cloudflare 実起動完了**（2026-06-10）。`https://mdcollab-api.yskab-dev.workers.dev`。
   Workers + Hyperdrive→Neon + R2 + 自前 Google OAuth + setup(owner化) + 文書 R2 往復まで本番疎通確認済み。
   手順書 [`docs/cloudflare-deploy.md`](cloudflare-deploy.md)。secrets は `wrangler secret`（SESSION/ENCRYPTION/S3×2/GOOGLE×2）。
-- [~] **Terraform(cf-personal) 実リソース化**（R2/Hyperdrive のみ・Worker は wrangler 継続）。
-  構成・OpenTofu 導入・init/validate 済み（`infra/envs/mdcollab-cf-personal/`・provider v5.19）。
-  **残: ユーザが API トークン＋Neon パスワードを手元で投入して `tofu import`→`tofu plan` で差分ゼロ確認**（手順 `IMPORT.md`）。
-- [~] **CI 実配線（GitHub Actions）**（`.github/workflows/ci.yml`: check[typecheck+test+webビルド] → main push で deploy-cf）。
-  repo: `plzsave/mdcollab`（private）。check ジョブは成功確認済み。
-  **残: GitHub Secret `CLOUDFLARE_API_TOKEN`（Workers Scripts:Edit）を投入すれば deploy 自動化が完成**。
-  Terraform/migrate は CI 非対象（手動）。ランタイム秘密は wrangler secret 済みで deploy 時不要。
+- [x] **Terraform(cf-personal) 実リソース化 完了**（2026-06-12・R2/Hyperdrive のみ・Worker は wrangler 継続）。
+  OpenTofu で import 済み・`tofu plan` 差分ゼロ（`infra/envs/mdcollab-cf-personal/`・provider 5.19・state ローカル）。
+  Hyperdrive は password/mtls を `ignore_changes`。手順 `IMPORT.md`。
+- [x] **CI/CD 完了**（GitHub Actions・repo `plzsave/mdcollab` private）。`ci.yml`: check[typecheck+test+webビルド] → main push で deploy-cf（web build→wrangler deploy→smoke）。`CLOUDFLARE_API_TOKEN` 投入済みで全ジョブ緑・自動デプロイ稼働。Terraform/migrate は CI 非対象（手動）。
 - [ ] （後回し）**Lambda/Fargate アダプタ** ＋ **Terraform(aws-workplace)** ＋ **CodePipeline**
 - [x] ~~データ移行スクリプト~~ → **不要**（本番空スタート・履歴引き継ぎなし）
 
