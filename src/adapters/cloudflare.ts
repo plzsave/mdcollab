@@ -28,6 +28,9 @@ export default {
   async fetch(request: Request, env: WorkerEnv, ctx: ExecutionContext): Promise<Response> {
     // /api/auth/* を IP 単位でレート制限（ログイン連打・コスト保護）。
     // バインディング欠落時はフェイルオープン（締め出しより可用性を優先）。
+    // Workers のレート制限バインディングは "permissive/結果整合/コロ単位" の best-effort
+    // （正確な計数ではない・公式ドキュメント）。持続的な乱用コストを上げる用途。厳密な
+    // 制限が要るなら独自ドメイン + WAF レート制限ルール（ゾーン単位）へ。
     const url = new URL(request.url);
     if (env.AUTH_LIMITER && url.pathname.startsWith("/api/auth/")) {
       const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
