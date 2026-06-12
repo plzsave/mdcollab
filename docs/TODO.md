@@ -153,7 +153,9 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 **問題なし（確認済み）:** 署名セッション(HS256・alg 固定)・httpOnly/Secure/SameSite=Lax・OAuth state(CSRF)・dev-login 本番無効・members 認可マトリクス・AES-GCM 暗号化(平文非返却)・SQL パラメータ化・ストレージキーは UUID・HTML は DOMPurify・PAT はホスト固定送信。
 
 **リスク受容 / 後回し（要時に対応）:**
-- [ ] アプリ層レート制限なし（緩和: CF edge DDoS・members ゲート・OAuth Testing）。要なら CF WAF レート制限ルールを `/api/auth/*`・`/review*` に
+- [~] レート制限: `/api/auth/*` に Workers `[[ratelimits]]`(AUTH_LIMITER・IP 30/60s) を導入（cloudflare アダプタ・フェイルオープン）。
+  ただし Cloudflare の同バインディングは公式に **permissive/結果整合/コロ単位の best-effort**（正確な計数ではない）で、実機バースト(50〜100)では 429 を返さなかった＝**持続的乱用のコストを上げる程度**。
+  **厳密な制限が要る場合は独自ドメイン + WAF レート制限ルール（ゾーン単位・正確）へ。workers.dev では WAF レート制限は使えない。**
 - [ ] 入力サイズ上限（本文/コメント等）未設定（Workers が ~100MB で頭打ち・members 限定）
 - [ ] CSP 未導入（index.html のインラインテーマ script に nonce/hash が要るため保留・X-Frame-Options で当面のクリックジャッキングは防御）
 - [ ] esbuild moderate advisory（dev 専用の推移依存・本番無関係・上流更新待ち）
