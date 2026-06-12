@@ -1,7 +1,10 @@
 name: ci
 
-# 個人(Cloudflare)側の CI。職場(AWS)は CodePipeline/CodeBuild が同じ repo スクリプトを呼ぶ（§5.2）。
-# このワークフローは「秘密注入 + repo スクリプト呼び出し」だけを担い、デプロイ実体は持たない。
+# 個人(Cloudflare)側の CI/CD。
+#   check : 型チェック + テスト + web ビルド（PR と main の両方で実行＝品質ゲート）
+#   deploy: main への push のみ。web をビルドして Worker(+[assets]) をデプロイ
+# デプロイ実体は scripts/deploy-cf.sh（ローカルでも同じものを使える）。
+# 注: Terraform(R2/Hyperdrive) と DB migrate は CI では回さない（手動運用）。
 
 on:
   push:
@@ -15,19 +18,22 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - run: make check # typecheck + test
+      - run: make check # typecheck + test（バックエンド）
+      - run: bun install --frozen-lockfile
+        working-directory: web
+      - run: bun run build:web # web の型チェック(tsc) + ビルド
 
   deploy-cf:
     needs: check
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      # Cloudflare は GitHub OIDC 連携が無いためスコープを絞った API トークンを使う（§5.2）
+      # Cloudflare は GitHub OIDC 連携が無いためスコープを絞った API トークンを使う（§5.2）。
+      # ランタイム秘密(SESSION_SECRET 等)は `wrangler secret` で投入済み＝デプロイでは不要。
       - run: make deploy-cf
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          BASE_URL: ${{ vars.BASE_URL }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CLOUDFLARE_ACCOUNT_ID: "4d9f47fbb96473f1fb10e509ace25cd7"
+          BASE_URL: "https://mdcollab-api.yskab-dev.workers.dev"
