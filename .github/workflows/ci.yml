@@ -15,7 +15,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: make check # typecheck + test（バックエンド）
@@ -28,7 +28,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
       # Cloudflare は GitHub OIDC 連携が無いためスコープを絞った API トークンを使う（§5.2）。
       # ランタイム秘密(SESSION_SECRET 等)は `wrangler secret` で投入済み＝デプロイでは不要。
