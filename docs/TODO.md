@@ -156,6 +156,7 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - [~] レート制限: `/api/auth/*` に Workers `[[ratelimits]]`(AUTH_LIMITER・IP 30/60s) を導入（cloudflare アダプタ・フェイルオープン）。
   ただし Cloudflare の同バインディングは公式に **permissive/結果整合/コロ単位の best-effort**（正確な計数ではない）で、実機バースト(50〜100)では 429 を返さなかった＝**持続的乱用のコストを上げる程度**。
   **厳密な制限が要る場合は独自ドメイン + WAF レート制限ルール（ゾーン単位・正確）へ。workers.dev では WAF レート制限は使えない。**
+  → 採用方針: **2（独自ドメイン+WAF）**。実行は後日。手順書 [`docs/custom-domain-waf-ratelimit.md`](custom-domain-waf-ratelimit.md)。
 - [ ] 入力サイズ上限（本文/コメント等）未設定（Workers が ~100MB で頭打ち・members 限定）
 - [ ] CSP 未導入（index.html のインラインテーマ script に nonce/hash が要るため保留・X-Frame-Options で当面のクリックジャッキングは防御）
 - [ ] esbuild moderate advisory（dev 専用の推移依存・本番無関係・上流更新待ち）
