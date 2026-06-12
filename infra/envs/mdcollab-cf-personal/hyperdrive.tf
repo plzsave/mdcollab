@@ -20,4 +20,12 @@ resource "cloudflare_hyperdrive_config" "neon" {
   }
 
   origin_connection_limit = 20
+
+  # password は Cloudflare API が読み戻せず毎回 diff になる。さらに provider が
+  # modified_on を computed 扱いにしないバグがあり、変更を伴う apply が
+  # "inconsistent result after apply" で失敗する。実害のない差分なので Terraform 側で
+  # 追跡対象から外し、no-op（No changes）に保つ。mtls も {}→null の正規化差分を抑制。
+  lifecycle {
+    ignore_changes = [origin.password, mtls]
+  }
 }
