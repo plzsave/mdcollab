@@ -4,3 +4,8 @@
 
 neon_password = "REPLACE_ME"
 # account_id = "4d9f47fbb96473f1fb10e509ace25cd7"  # 既定値があるので通常不要
+
+# WAF レート制限を適用する独自ドメインのゾーン ID。
+# 空（未指定）のままなら WAF ルール(waf.tf)は作成されない。ドメイン確定後に設定する。
+# 環境変数で渡す場合: export TF_VAR_zone_id='...'
+# zone_id = "REPLACE_ME"

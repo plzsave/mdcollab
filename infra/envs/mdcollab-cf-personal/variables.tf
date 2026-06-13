@@ -12,3 +12,13 @@ variable "neon_password" {
   type        = string
   sensitive   = true
 }
+
+# WAF レート制限を適用する独自ドメインのゾーン ID。
+# 空のままなら WAF ルール(waf.tf)は作成されない（count ガード）ので、
+# ドメイン確定前でも既存の R2/Hyperdrive 向け plan/apply は壊れない。
+# 渡し方: 環境変数 TF_VAR_zone_id=... もしくは gitignore された terraform.tfvars。
+variable "zone_id" {
+  description = "WAF レート制限を適用する Cloudflare ゾーン ID（未設定なら WAF ルール不作成）"
+  type        = string
+  default     = ""
+}

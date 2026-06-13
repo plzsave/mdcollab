@@ -6,3 +6,6 @@
 terraform.tfvars
 *.auto.tfvars
 crash.log
+# CF トークン等の秘密（direnv dotenv で読む）。.envrc も誤コミット防止で無視。
+.env
+.envrc
