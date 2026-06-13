@@ -1,17 +1,17 @@
-# Hyperdrive 設定（→ Neon, Singapore）。手動作成済みを import する。
-#   id=b682f4dcc5944f72995071cb3353f975 / name=mdcollab-neon
+# Hyperdrive 設定（→ Postgres, 例: Neon）。手動作成済みを import する。
+#   host/database/user/port は variables.tf 経由（個人値はコミットしない）
 #   caching は read-after-write のため無効化済み（disabled=true）
 # import: tofu import cloudflare_hyperdrive_config.neon '<account_id>/<hyperdrive_id>'
 resource "cloudflare_hyperdrive_config" "neon" {
   account_id = var.account_id
-  name       = "mdcollab-neon"
+  name       = var.hyperdrive_name
 
   origin = {
     scheme   = "postgresql" # 実態に合わせる（Hyperdrive 側の保存値）
-    database = "neondb"
-    host     = "ep-lingering-dust-ao4eeoel-pooler.c-2.ap-southeast-1.aws.neon.tech"
-    port     = 5432
-    user     = "neondb_owner"
+    database = var.neon_database
+    host     = var.neon_host
+    port     = var.neon_port
+    user     = var.neon_user
     password = var.neon_password # 読み戻し不可。TF_VAR_neon_password / tfvars で指定。
   }
 

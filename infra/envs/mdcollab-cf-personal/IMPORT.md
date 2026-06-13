@@ -38,6 +38,9 @@ export TF_VAR_neon_password='＜Neon のパスワード＞'
 # もしくは terraform.tfvars.example をコピーして terraform.tfvars に記入（gitignore 済み）
 ```
 
+> 個人のアカウント値（`account_id` / `r2_bucket_name` / `neon_host` 等）も `terraform.tfvars`
+> に入れる（リポジトリにはプレースホルダの `.example` だけ。実値はコミットしない）。
+
 ## 3. init（未実施なら）
 
 ```bash
@@ -47,10 +50,12 @@ tofu init -input=false
 ## 4. 既存リソースを import
 
 ```bash
-ACC=4d9f47fbb96473f1fb10e509ace25cd7
+ACC=<YOUR_ACCOUNT_ID>
+BUCKET=<YOUR_R2_BUCKET>       # terraform.tfvars の r2_bucket_name と一致させる
+HID=<YOUR_HYPERDRIVE_ID>      # wrangler hyperdrive list / ダッシュボードで確認
 
-tofu import cloudflare_r2_bucket.docs "$ACC/mdcollab-docs-personal/default"
-tofu import cloudflare_hyperdrive_config.neon "$ACC/b682f4dcc5944f72995071cb3353f975"
+tofu import cloudflare_r2_bucket.docs "$ACC/$BUCKET/default"
+tofu import cloudflare_hyperdrive_config.neon "$ACC/$HID"
 ```
 
 ## 5. 差分確認

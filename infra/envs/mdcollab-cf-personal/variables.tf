@@ -1,7 +1,47 @@
 variable "account_id" {
-  description = "Cloudflare アカウント ID"
+  description = "Cloudflare アカウント ID（terraform.tfvars か TF_VAR_account_id で渡す）"
   type        = string
-  default     = "4d9f47fbb96473f1fb10e509ace25cd7"
+}
+
+variable "r2_bucket_name" {
+  description = "MD 本体を置く R2 バケット名"
+  type        = string
+}
+
+variable "r2_location" {
+  description = "R2 バケットのロケーションヒント（apac / wnam / enam / weur / eeur）"
+  type        = string
+  default     = "apac"
+}
+
+# Hyperdrive の origin（Postgres）。host はデプロイ先固有なので変数化（パスワードは別途・読み戻し不可）。
+variable "hyperdrive_name" {
+  description = "Hyperdrive 設定の名前"
+  type        = string
+  default     = "mdcollab-neon"
+}
+
+variable "neon_host" {
+  description = "Hyperdrive origin の Postgres ホスト（例: Neon の pooler ホスト）"
+  type        = string
+}
+
+variable "neon_database" {
+  description = "Postgres データベース名"
+  type        = string
+  default     = "neondb"
+}
+
+variable "neon_user" {
+  description = "Postgres ユーザー名"
+  type        = string
+  default     = "neondb_owner"
+}
+
+variable "neon_port" {
+  description = "Postgres ポート"
+  type        = number
+  default     = 5432
 }
 
 # Hyperdrive の origin パスワード（Neon の接続パスワード）。
