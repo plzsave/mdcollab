@@ -6,7 +6,7 @@
 本書は、これを **ネイティブ tool use ループ**（LangChain 不採用）へ引き上げ、
 「**参照リポジトリの実ファイルを自分で読んで根拠付きでレビューする**」エージェントにする設計を定める。
 
-> ステータス: **全フェーズ（A〜D）実装済み**。
+> ステータス: **全フェーズ（A〜D）実装済み**。次の拡張（可観測性・安全網・ツール拡張・改稿エージェント化）は続編 [`ai-review-agent-v2.md`](ai-review-agent-v2.md) を参照。
 > 出典: 本設計のレビュー対象実装は `src/routes/reviews.ts` / `src/llm/` / `src/github/`。ループ本体は `src/ai/reviewAgent.ts`、ツール工場は `src/ai/reviewTools.ts`、web は `web/src/components/AiReviewPanel.tsx` / `web/src/api/review-stream.ts`。
 
 ## 実装メモ（Phase A・設計擬似コードからの差分）
