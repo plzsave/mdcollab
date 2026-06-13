@@ -3,6 +3,16 @@ import type { GithubClient } from "./types";
 const API = "https://api.github.com";
 const MAX_README = 8000; // プロンプト肥大を避けるため README は先頭のみ採用
 const MAX_FILE = 32 * 1024; // tool_result 肥大＝トークン爆発防止（1ファイル32KB上限）
+const MAX_TREE = 500; // ツリー一覧の件数上限（同上）
+
+function githubHeaders(pat: string): Record<string, string> {
+  return {
+    Authorization: `Bearer ${pat}`,
+    Accept: "application/vnd.github+json",
+    "User-Agent": "mdcollab",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+}
 
 // fetch_repo_file の path 検証。`..`・絶対パス・URL・空・先頭スラッシュを拒否し、
 // 拒否理由を文字列で返す（OK なら null）。リポジトリ越え・SSRF・パストラバーサルを防ぐ。
@@ -56,12 +66,7 @@ export function createGithubClient(): GithubClient {
     async fetchRepoFile(repo, path, pat) {
       const reason = rejectPath(path);
       if (reason) return `（ファイル取得拒否: ${reason}）`;
-      const headers = {
-        Authorization: `Bearer ${pat}`,
-        Accept: "application/vnd.github+json",
-        "User-Agent": "mdcollab",
-        "X-GitHub-Api-Version": "2022-11-28",
-      };
+      const headers = githubHeaders(pat);
       try {
         const res = await fetch(`${API}/repos/${repo}/contents/${encodeURIComponent(path).replace(/%2F/g, "/")}`, {
           headers,
@@ -77,6 +82,33 @@ export function createGithubClient(): GithubClient {
         return text.length > MAX_FILE ? `${text.slice(0, MAX_FILE)}\n（…32KB で切り詰め）` : text;
       } catch (e) {
         return `（${repo} の ${path} 取得でエラー: ${e instanceof Error ? e.message : "unknown"}）`;
+      }
+    },
+
+    async listRepoTree(repo, pat) {
+      const headers = githubHeaders(pat);
+      try {
+        // default ブランチを解決してから git/trees を recursive 取得する（HEAD は tree_sha として不安定）。
+        const metaRes = await fetch(`${API}/repos/${repo}`, { headers });
+        if (!metaRes.ok) return `（${repo} のメタ取得に失敗: HTTP ${metaRes.status}）`;
+        const meta = (await metaRes.json()) as { default_branch?: string };
+        const branch = meta.default_branch ?? "main";
+
+        const res = await fetch(`${API}/repos/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`, {
+          headers,
+        });
+        if (!res.ok) return `（${repo} のツリー取得に失敗: HTTP ${res.status}）`;
+        const j = (await res.json()) as { tree?: { path?: string; type?: string }[]; truncated?: boolean };
+        const paths = (j.tree ?? [])
+          .filter((t) => t.type === "blob" && t.path)
+          .map((t) => t.path as string);
+        if (paths.length === 0) return `（${repo} にファイルが見つかりません）`;
+        const shown = paths.slice(0, MAX_TREE).join("\n");
+        return paths.length > MAX_TREE || j.truncated
+          ? `${shown}\n（…一覧を ${MAX_TREE} 件で切り詰め）`
+          : shown;
+      } catch (e) {
+        return `（${repo} のツリー取得でエラー: ${e instanceof Error ? e.message : "unknown"}）`;
       }
     },
   };
