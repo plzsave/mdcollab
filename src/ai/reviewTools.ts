@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
 import type { Deps } from "../env";
 import { comments, documents, threads } from "../db/schema";
 import type { ToolImpl } from "./reviewAgent";
@@ -9,6 +9,19 @@ import type { ToolImpl } from "./reviewAgent";
 
 const MAX_DOCS = 20; // search_docs の返却上限（トークン爆発防止）
 const MAX_THREADS = 50; // get_doc_threads の返却上限
+const SNIPPET_RADIUS = 100; // 一致箇所の前後文字数（スニペット長を固定＝トークン爆発防止）
+
+// body 中の query 一致箇所の前後を抜き出した 1 行スニペットを返す（無一致は空文字）。
+// 本文を丸ごと返すとトークンが爆発するため、必ず一致周辺だけに切り詰める。
+function makeSnippet(body: string | null, query: string): string {
+  if (!body) return "";
+  const i = body.toLowerCase().indexOf(query.toLowerCase());
+  if (i < 0) return ""; // 本文に無い（＝タイトル一致）ならスニペットなし
+  const start = Math.max(0, i - SNIPPET_RADIUS);
+  const end = Math.min(body.length, i + query.length + SNIPPET_RADIUS);
+  const core = body.slice(start, end).replace(/\s+/g, " ").trim();
+  return `${start > 0 ? "…" : ""}${core}${end < body.length ? "…" : ""}`;
+}
 
 function strInput(input: unknown, key: string): string | null {
   const v = (input as Record<string, unknown> | null)?.[key];
@@ -105,37 +118,43 @@ export function getDocThreadsTool(deps: Deps, documentId: string): ToolImpl {
   };
 }
 
-// search_docs: ワークスペース内の文書をタイトル検索（members 限定）。関連文書を見つけるため。
-// 本文は R2/GCS にあり DB は title のみ＝検索対象はタイトル。LIKE 値は drizzle がパラメータ化（注入安全）。
+// search_docs: ワークスペース内の文書をタイトル＋本文で検索（members 限定）。関連文書を見つけるため。
+// 本文は保存時に同期した documents.body を検索（本体は R2/GCS）。LIKE 値は drizzle がパラメータ化（注入安全）。
+// トークン爆発を避けるため、本文は丸ごと返さず一致箇所のスニペットだけを返す（件数・長さ上限つき）。
 export function searchDocsTool(deps: Deps, currentDocId: string): ToolImpl {
   return {
     def: {
       name: "search_docs",
       description:
-        "ワークスペース内の他の文書をタイトルで検索する。関連文書や参照先を見つけて整合性を確認したいときに呼ぶ。",
+        "ワークスペース内の他の文書をタイトルと本文で検索し、一致箇所の抜粋を返す。関連文書や参照先を見つけて整合性を確認したいときに呼ぶ。",
       inputSchema: {
         type: "object",
-        properties: { query: { type: "string", description: "タイトルに含まれる語" } },
+        properties: { query: { type: "string", description: "タイトルまたは本文に含まれる語" } },
         required: ["query"],
       },
     },
     async execute(input) {
-      const query = strInput(input, "query");
-      if (query == null || query.trim() === "") return "（不正な入力: query を文字列で指定してください）";
+      const query = strInput(input, "query")?.trim();
+      if (!query) return "（不正な入力: query を文字列で指定してください）";
       try {
         const rows = await deps.db
-          .select({ id: documents.id, title: documents.title })
+          .select({ id: documents.id, title: documents.title, body: documents.body })
           .from(documents)
           .where(
             and(
-              ilike(documents.title, `%${query.trim()}%`),
+              or(ilike(documents.title, `%${query}%`), ilike(documents.body, `%${query}%`)),
               eq(documents.archived, false),
               ne(documents.id, currentDocId),
             ),
           )
           .limit(MAX_DOCS);
-        if (rows.length === 0) return `（「${query.trim()}」に一致する文書はありません）`;
-        return rows.map((r) => `- ${r.title} (id: ${r.id})`).join("\n");
+        if (rows.length === 0) return `（「${query}」に一致する文書はありません）`;
+        return rows
+          .map((r) => {
+            const snippet = makeSnippet(r.body, query);
+            return snippet ? `- ${r.title} (id: ${r.id})\n  ${snippet}` : `- ${r.title} (id: ${r.id})`;
+          })
+          .join("\n");
       } catch (e) {
         return `（文書検索でエラー: ${e instanceof Error ? e.message : "unknown"}）`;
       }

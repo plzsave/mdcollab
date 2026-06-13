@@ -25,9 +25,18 @@
 - **review-repo** → 上記 + `[fetch_repo_file, list_repo_tree]`（PAT ありのとき）。PAT 無しなら repo ツールは付かず doc ツールのみ。
 
 判断:
-- **`search_docs` は title 検索のみ**。本文は R2/GCS にあり DB は `documents.title` しか持たないため。LIKE 値は drizzle がパラメータ化（注入安全）。当該 doc・archived は除外。
+- **`search_docs`**: 当初は title 検索のみ → 後に**本文全文検索へ拡張**（下記「search_docs 全文検索拡張」）。LIKE 値は drizzle がパラメータ化（注入安全）。当該 doc・archived は除外。
 - **`get_doc_threads` は当該 doc 限定**（requireMember 済み）。`list_repo_tree` は default branch を解決して git/trees を recursive 取得・500件上限。すべて never throw。
 - `buildSystem` はツール名を列挙せず汎用方針に留め、具体は各ツールの description に委ねる（キャッシュ安定・追加に強い）。
+
+### 実装メモ（search_docs 全文検索拡張）
+
+本文は R2/GCS（`documents.storageKey`）にあり DB は持たなかったため、当初 `search_docs` はタイトルのみだった。恒久実装として **Postgres に検索用の本文コピー列 `documents.body` を持ち、保存時に同期**する方式へ拡張（`src/routes/documents.ts` の create / PUT 更新で `body` を同期。migration `0002`＝plain `ALTER ADD COLUMN`・拡張不要で pglite/本番両対応）。
+
+- 検索は `title` OR `body` の `ILIKE`（言語非依存＝日本語も部分一致で拾える。`pg_trgm`/`tsvector` は pglite 非対応 & 日本語トークナイズ不可のため不採用）。
+- **トークン対策＝本文を丸ごと返さない**: 一致箇所の前後 100 字スニペットのみ（`SNIPPET_RADIUS`）、最大 `MAX_DOCS=20` 件。`tool_result` は毎ターン再送されるため、戻り値サイズの固定が効く。
+- 既存文書は次回保存時に `body` が埋まる（**backfill は別途**＝必要なら store から読んで一括 UPDATE）。
+- スケール: 数百〜低数千件は seq scan の ILIKE で十分。大規模化したら本番のみ `pg_trgm` GIN 索引を足せる（API 無改修の純粋な最適化。pglite はその索引非対応なので migration には入れない）。
 
 ### 実装メモ（Phase C）
 
@@ -371,7 +380,7 @@ Task Budgets（beta）等は Phase A では過剰。`MAX_TURNS` で十分。
 |---|---|---|
 | `list_repo_tree()` | 固定 repo・GitHub trees API・PAT | default branch 解決→recursive・500件上限 |
 | `get_doc_threads()` | 当該 doc の threads/comments（requireMember 済み） | open/resolved + 本文を整形 |
-| `search_docs(query)` | ワークスペース内・members 限定・LIKE はパラメータ化 | **title 検索のみ**（本文は DB 外）・当該 doc/archived 除外 |
+| `search_docs(query)` | ワークスペース内・members 限定・LIKE はパラメータ化 | title+本文の全文検索（同期列 `documents.body`）・スニペット返却・当該 doc/archived 除外 |
 
 ---
 

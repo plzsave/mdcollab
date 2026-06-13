@@ -38,6 +38,9 @@ export const documents = pgTable("documents", {
   id: text("id").primaryKey(), // 新規採番（旧 Drive fileId は migration_source）
   folderId: text("folder_id").references(() => folders.id),
   title: text("title").notNull(),
+  // 検索用の本文コピー（search_docs の全文検索用）。本体は R2/GCS だが、検索のため Postgres に
+  // 同期コピーを持つ。保存時に同期され、既存文書は次回保存時に埋まる（backfill は別途）。
+  body: text("body"),
   storageKey: text("storage_key"), // (A) R2/GCS 本体キー
   driveFileId: text("drive_file_id"), // (B) Drive 本体参照
   version: integer("version").notNull().default(1), // 楽観ロック（旧 lastUpdated 代替）
