@@ -226,6 +226,34 @@ describe("AI Review Agent（tool use ループ）", () => {
     expect(messages).not.toContain("id: d1"); // 当該 doc は除外
   });
 
+  it("search_docs: 本文一致でも見つかり、一致箇所のスニペットを返す（本文は丸ごと返さない）", async () => {
+    const h = await setupRepo();
+    const longBody =
+      "前置き".repeat(80) + "重要な仕様はこのキーワードの近くにある" + "後置き".repeat(80);
+    await h.db.insert(schema.documents).values({
+      id: "d2",
+      title: "無関係なタイトル", // タイトルには "キーワード" を含めない＝本文一致のみ
+      body: longBody,
+      version: 1,
+      createdBy: "u@example.com",
+    });
+
+    h.llm.script.push(toolTurn({ name: "search_docs", input: { query: "キーワード" } }), textTurn("確認"));
+
+    const res = await h.req("/api/documents/d1/review", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const toolResult = JSON.stringify(h.llm.converseCalls.at(-1)!.messages);
+    expect(toolResult).toContain("無関係なタイトル"); // 本文一致でヒット
+    expect(toolResult).toContain("id: d2");
+    expect(toolResult).toContain("重要な仕様はこのキーワードの近くにある"); // スニペットに一致周辺
+    expect(toolResult).toContain("…"); // 前後が切り詰められている
+    expect(toolResult).not.toContain("前置き".repeat(80)); // 本文を丸ごとは返さない
+  });
+
   it("plain review もツール（doc/workspace）を持つ", async () => {
     const h = await setupRepo();
     const res = await h.req("/api/documents/d1/review", {

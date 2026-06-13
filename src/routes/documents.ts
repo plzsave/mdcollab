@@ -40,6 +40,7 @@ async function createDoc(
       id,
       folderId: args.folderId,
       title: args.title,
+      body: args.content, // 検索用に本文コピーを同期（本体は store 側）
       storageKey,
       driveFileId,
       version: 1,
@@ -202,6 +203,7 @@ export function documentsRoutes(deps: Deps) {
       .update(documents)
       .set({
         version: next,
+        body: body.content, // 検索用本文コピーを同期
         storageKey: deps.store.backend === "s3" ? newKey : doc.storageKey,
         updatedAt: new Date(),
       })

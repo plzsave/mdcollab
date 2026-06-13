@@ -15,6 +15,13 @@
       "when": 1781018194210,
       "tag": "0001_gigantic_groot",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781354562127,
+      "tag": "0002_bright_frank_castle",
+      "breakpoints": true
     }
   ]
 }

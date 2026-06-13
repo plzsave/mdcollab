@@ -29,6 +29,34 @@ describe("POST /api/documents（作成）", () => {
     expect(await got.json()).toMatchObject({ id: doc.id, content: "", version: 1 });
   });
 
+  it("検索用 body 列が作成時の本文と同期される", async () => {
+    const h = await asMember();
+    const doc = (await (await createDoc(h, { title: "T", content: "# 見出し\n本文テキスト" })).json()) as {
+      id: string;
+    };
+    const [row] = await h.db
+      .select({ body: schema.documents.body })
+      .from(schema.documents)
+      .where(eq(schema.documents.id, doc.id));
+    expect(row!.body).toBe("# 見出し\n本文テキスト");
+  });
+
+  it("更新時に body 列も新本文へ同期される", async () => {
+    const h = await asMember();
+    const doc = (await (await createDoc(h, { title: "T", content: "旧本文" })).json()) as { id: string };
+    await h.req(`/api/documents/${doc.id}`, {
+      as: "u@example.com",
+      method: "PUT",
+      headers: { "If-Match": '"1"' },
+      body: JSON.stringify({ content: "新本文" }),
+    });
+    const [row] = await h.db
+      .select({ body: schema.documents.body })
+      .from(schema.documents)
+      .where(eq(schema.documents.id, doc.id));
+    expect(row!.body).toBe("新本文");
+  });
+
   it("title 欠落は 400 / 未知の folderId は 400", async () => {
     const h = await asMember();
     expect((await createDoc(h, {})).status).toBe(400);
