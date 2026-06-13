@@ -95,12 +95,15 @@ export function makeFakeLlm(): FakeLlm {
 export function makeFakeGithub(): GithubClient & {
   calls: { repo: string; pat: string }[];
   fileCalls: { repo: string; path: string; pat: string }[];
+  treeCalls: { repo: string; pat: string }[];
 } {
   const calls: { repo: string; pat: string }[] = [];
   const fileCalls: { repo: string; path: string; pat: string }[] = [];
+  const treeCalls: { repo: string; pat: string }[] = [];
   return {
     calls,
     fileCalls,
+    treeCalls,
     async fetchRepoContext(repo, pat) {
       calls.push({ repo, pat });
       return `リポジトリ: ${repo}\n\n# README（抜粋）\nFAKE-README of ${repo}`;
@@ -108,6 +111,10 @@ export function makeFakeGithub(): GithubClient & {
     async fetchRepoFile(repo, path, pat) {
       fileCalls.push({ repo, path, pat });
       return `FAKE-FILE(${repo}:${path})`;
+    },
+    async listRepoTree(repo, pat) {
+      treeCalls.push({ repo, pat });
+      return `src/a.ts\nsrc/b.ts\nREADME.md`;
     },
   };
 }

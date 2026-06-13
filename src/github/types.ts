@@ -12,4 +12,11 @@ export interface GithubClient {
    * path 検証・サイズ上限は実装側の責務。
    */
   fetchRepoFile(repo: string, path: string, pat: string): Promise<string>;
+
+  /**
+   * repo（"owner/name"）のファイルツリー（blob パス一覧）をテキストで返す（list_repo_tree 用）。
+   * default ブランチを解決して git/trees を recursive 取得する。fetchRepoFile 同様 throw せず、
+   * エラー時は説明的なメモ文字列を返す。件数上限は実装側の責務。
+   */
+  listRepoTree(repo: string, pat: string): Promise<string>;
 }
