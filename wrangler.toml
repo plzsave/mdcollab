@@ -4,6 +4,10 @@ compatibility_date = "2026-06-01"
 # postgres.js を Workers で動かすため必須
 compatibility_flags = ["nodejs_compat"]
 
+# workers.dev 経路を無効化（迂回防止）。入口を独自ドメイン(md.yskbase.com)だけにする。
+# ※ トップレベルキーなので、必ず最初のテーブル見出し([assets]など)より前に置くこと。
+workers_dev = false
+
 # フロント(web/)の SPA を同一オリジンで配信。
 #   - directory: vite build の出力（デプロイ前に `bun run build:web` 必須）
 #   - run_worker_first=["/api/*"]: /api/* だけ Worker(API)へ、それ以外は Asset Worker
@@ -37,7 +41,7 @@ simple = { limit = 30, period = 60 }
 S3_REGION = "auto"
 S3_ENDPOINT = "https://4d9f47fbb96473f1fb10e509ace25cd7.r2.cloudflarestorage.com"
 S3_BUCKET = "mdcollab-docs-personal"
-BASE_URL = "https://mdcollab-api.yskab-dev.workers.dev"
+BASE_URL = "https://md.yskbase.com"
 # ALLOWED_DOMAIN = "your-workspace-domain.com"
 
 # secrets（`wrangler secret put <NAME>` で投入。リポジトリには置かない）:
@@ -45,3 +49,7 @@ BASE_URL = "https://mdcollab-api.yskab-dev.workers.dev"
 #   S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY
 #   GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET   ← ログインを通す段階で投入
 # ※ ENCRYPTION_KEY は一度決めたら変更しないこと（既存 AI キーの復号が不能になる）。
+
+[[routes]]
+pattern = "md.yskbase.com"
+custom_domain = true
