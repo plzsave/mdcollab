@@ -114,6 +114,22 @@ Workers & Pages → `mdcollab-api` → Settings → Domains & Routes →
 `mdcollab-api.<account>.workers.dev` を **Disable**。恒久運用は wrangler.toml を正にすること。
 </details>
 
+## 3.5 CI（GitHub Actions）で踏んだ罠（実測・独自ドメイン移行に伴う）
+
+独自ドメイン化で `ci.yml` の `deploy-cf` が連続で落ちた。原因と対処を記録（再実行時の備え）:
+
+1. **CI トークンの権限不足（`Authentication error [code: 10000]` on `/zones/.../workers/routes`）**
+   `custom_domain = true` を入れると `wrangler deploy` がゾーンの Workers Routes API を叩く。
+   CI 用 `CLOUDFLARE_API_TOKEN`（GitHub Secret）に **Zone · Workers Routes · Edit**（＋ DNS Edit・
+   対象ゾーン）を追加して解消。TF 用トークンとは別物。
+2. **smoke が旧 URL を叩いて 404**
+   `.github/workflows/ci.yml` の `BASE_URL` を `https://md.yskbase.com` に更新（workers.dev は
+   `workers_dev=false` で無効化済み）。
+3. **smoke が CI の IP 起因で 403**
+   Cloudflare ゾーンは **GitHub Actions のデータセンター IP を challenge** するため `/health` が 403
+   になる（手元・実ブラウザは 200）。`scripts/deploy-cf.sh` の smoke を「403 は警告に留め、
+   DNS/5xx/404 等のみ失敗」に変更（IP 起因の恒久赤を回避しつつ本物の障害は捕捉）。
+
 ## 4. WAF レート制限ルールを作成（Terraform `cloudflare_ruleset`・ゾーン側・正確）
 
 既存の infra env（`infra/envs/mdcollab-cf-personal/`）に**ゾーン scope のルールセット**を追加する。
