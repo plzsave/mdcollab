@@ -3,8 +3,11 @@ dist/
 .dev.vars
 .env
 .env.*
+!.env.example
 *.local
 .wrangler/
+# wrangler.toml は wrangler.template.toml + env から生成する（個人のアカウント値を含むため）
+wrangler.toml
 # ローカル検証で curl が作るセッション Cookie の残骸
 cookie.txt
 # Terraform

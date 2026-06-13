@@ -1,11 +1,21 @@
 # コピーして terraform.tfvars を作る（terraform.tfvars は .gitignore 済み・コミット禁止）。
-# neon_password は Neon の接続パスワード。Hyperdrive の origin に使っている値。
-# 環境変数で渡す場合: export TF_VAR_neon_password='...'（この場合 tfvars 不要）
+# 個人のアカウント値はここに書く（リポジトリには入らない）。
+# 環境変数で渡す場合は TF_VAR_<name>=... でも可。
 
-neon_password = "REPLACE_ME"
-# account_id = "4d9f47fbb96473f1fb10e509ace25cd7"  # 既定値があるので通常不要
+# Cloudflare アカウント ID
+account_id = "REPLACE_ME"
+
+# R2 バケット（MD 本体ストア）
+r2_bucket_name = "your-r2-bucket"
+# r2_location  = "apac"   # apac / wnam / enam / weur / eeur（既定 apac）
+
+# Hyperdrive origin（Postgres / 例: Neon）
+neon_host     = "your-db-host.example.neon.tech"
+# neon_database = "neondb"        # 既定あり
+# neon_user     = "neondb_owner"  # 既定あり
+# neon_port     = 5432            # 既定あり
+neon_password = "REPLACE_ME"      # 読み戻し不可のため手動指定（TF_VAR_neon_password でも可）
 
 # WAF レート制限を適用する独自ドメインのゾーン ID。
 # 空（未指定）のままなら WAF ルール(waf.tf)は作成されない。ドメイン確定後に設定する。
-# 環境変数で渡す場合: export TF_VAR_zone_id='...'
 # zone_id = "REPLACE_ME"
