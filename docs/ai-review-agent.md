@@ -6,8 +6,8 @@
 本書は、これを **ネイティブ tool use ループ**（LangChain 不採用）へ引き上げ、
 「**参照リポジトリの実ファイルを自分で読んで根拠付きでレビューする**」エージェントにする設計を定める。
 
-> ステータス: **Phase A+B+C 実装済み**。Phase D（web 進捗チップ）は未着手。
-> 出典: 本設計のレビュー対象実装は `src/routes/reviews.ts` / `src/llm/` / `src/github/`。ループ本体は `src/ai/reviewAgent.ts`、ツール工場は `src/ai/reviewTools.ts`。
+> ステータス: **全フェーズ（A〜D）実装済み**。
+> 出典: 本設計のレビュー対象実装は `src/routes/reviews.ts` / `src/llm/` / `src/github/`。ループ本体は `src/ai/reviewAgent.ts`、ツール工場は `src/ai/reviewTools.ts`、web は `web/src/components/AiReviewPanel.tsx` / `web/src/api/review-stream.ts`。
 
 ## 実装メモ（Phase A・設計擬似コードからの差分）
 
@@ -39,7 +39,15 @@ OpenAI の tool use パリティを `src/llm/providers.ts` の `converse` に実
 - ルート配線は無改修（ループが provider 非依存）。OpenAI ユーザーも review/review-repo の全ツールを使える。
 - テスト: `test/llm-openai-converse.test.ts`（fetch をモックして SSE tool_calls 蓄積・テキスト delta・IR→OpenAI 翻訳を検証）。
 
-`reviews` の JSON/SSE 応答に `toolsUsed` / `truncated` を追加済み（web 側は未消費＝Phase D の進捗チップで利用予定。既存 SSE パーサは未知 `event: tool` を無視するので後方互換）。
+`reviews` の JSON/SSE 応答に `toolsUsed` / `truncated` を追加済み（Phase D で web が消費）。
+
+### 実装メモ（Phase D）
+
+web レビューパネルでエージェントの透明性（§9）を可視化:
+
+- `web/src/api/review-stream.ts`: `onTool` ハンドラを追加し `event: tool`（`{name, arg}`）をパース。`ReviewDone` に `toolsUsed`/`truncated` を追加。**`event: error` も処理**（Phase A で SSE 途中失敗時に流すが web は未処理だった）→ `ApiError` を throw してパネルの error 表示に乗せる。
+- `web/src/components/AiReviewPanel.tsx`: ツールを人間向けラベル（📄 ファイル読込 / 🗂 ツリー / 💬 スレッド / 🔎 検索）の進捗チップで表示。`truncated` 時は打ち切り警告。新規実行ごとにリセット。
+- 後方互換: 既存パーサは未知イベントを無視していたので、サーバ先行リリースでも壊れない。
 
 ## なぜ LangChain を使わないか
 
@@ -353,7 +361,7 @@ Task Budgets（beta）等は Phase A では過剰。`MAX_TURNS` で十分。
 | **A（縦切り最小）** | tool 1本（`fetch_repo_file`）・**Anthropic 経路**・ループ・方式 X・キャッシュ・テスト | `llm/types.ts`, `llm/providers.ts`, `github/types.ts`+`client.ts`, `ai/reviewAgent.ts`(新), `routes/reviews.ts`, `test/helpers/harness.ts`, `test/reviews-agent.test.ts`(新), 既存 `test/reviews.test.ts` 修正 |
 | B | ツール追加: `list_repo_tree` / `get_doc_threads` / `search_docs`（いずれも固定 repo or members 限定・透明性表示） | `github/`, `ai/reviewAgent.ts`, `routes/reviews.ts` |
 | ~~C~~ ✅ | OpenAI `converse` パリティ（自動キャッシュ）| `llm/providers.ts` |
-| D | web AI レビューパネルで `tool` イベント表示（「📄 …を読んでいます」進捗チップ） | `web/` |
+| ~~D~~ ✅ | web AI レビューパネルで `tool` イベント表示（進捗チップ）+ `truncated` 警告 + `event: error` 処理 | `web/` |
 
 **Phase A だけで「参照リポジトリの実ファイルを自分で読んで根拠付きレビュー」が動く**＝Tier 1→2 のジャンプを最小コストで実証できる。
 

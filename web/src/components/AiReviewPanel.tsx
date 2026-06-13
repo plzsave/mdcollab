@@ -3,9 +3,25 @@ import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "../api/client";
 import { useAiSettings, useCreateRevision, useReviews } from "../api/hooks";
-import { streamReview } from "../api/review-stream";
+import { streamReview, type ReviewToolEvent } from "../api/review-stream";
 import { renderMarkdown } from "../lib/markdown";
 import type { Review } from "../api/types";
+
+// エージェントが呼んだツールを人間向けラベルに（§9 透明性＝何を読んだか可視化）。
+function toolLabel({ name, arg }: ReviewToolEvent): string {
+  switch (name) {
+    case "fetch_repo_file":
+      return `📄 ${String(arg.path ?? "")} を読み込み`;
+    case "list_repo_tree":
+      return "🗂 リポジトリのファイル一覧を取得";
+    case "get_doc_threads":
+      return "💬 コメントスレッドを参照";
+    case "search_docs":
+      return `🔎 「${String(arg.query ?? "")}」で文書を検索`;
+    default:
+      return `🛠 ${name}`;
+  }
+}
 
 // AI レビュー側パネル（エディタ右）。SSE で逐次表示し、保存済みレビューも一覧。
 // 改稿（全文書き直し）を生成し、onApply でエディタ本文へ反映できる。
@@ -27,6 +43,8 @@ export function AiReviewPanel({
   const [useRepo, setUseRepo] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [streamText, setStreamText] = useState("");
+  const [tools, setTools] = useState<ReviewToolEvent[]>([]);
+  const [truncated, setTruncated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revised, setRevised] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -41,6 +59,8 @@ export function AiReviewPanel({
     setError(null);
     setRevised(null);
     setStreamText("");
+    setTools([]);
+    setTruncated(false);
     setStreaming(true);
     const ac = new AbortController();
     abortRef.current = ac;
@@ -50,7 +70,9 @@ export function AiReviewPanel({
         { instructions: instructions.trim() || undefined, repo: useRepo },
         {
           onDelta: (t) => setStreamText((prev) => prev + t),
-          onDone: () => {
+          onTool: (tool) => setTools((prev) => [...prev, tool]),
+          onDone: (meta) => {
+            setTruncated(!!meta.truncated);
             qc.invalidateQueries({ queryKey: ["reviews", documentId] });
           },
         },
@@ -144,6 +166,31 @@ export function AiReviewPanel({
             </div>
 
             {error && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>}
+
+            {tools.length > 0 && (
+              <div className="mt-3">
+                <div className="mb-1 text-xs font-medium text-slate-500">
+                  参照したもの{streaming && " （実行中…）"}
+                </div>
+                <ul className="space-y-1">
+                  {tools.map((t, i) => (
+                    <li
+                      key={i}
+                      className="truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 text-[11px] text-slate-600 dark:text-slate-300"
+                      title={toolLabel(t)}
+                    >
+                      {toolLabel(t)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {truncated && (
+              <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                ⚠ ツール実行が上限に達したため、途中までの結果です。
+              </p>
+            )}
 
             {(streamText || streaming) && (
               <div className="mt-3">
