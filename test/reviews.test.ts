@@ -32,8 +32,8 @@ describe("AI Review / Revision", () => {
     expect(body.provider).toBe("anthropic");
     expect(body.review).toContain("REVIEW(anthropic/claude-x)");
 
-    // fake LLM に渡ったプロンプトに本文が含まれている
-    expect(h.llm.calls[0]!.prompt).toContain("本文です");
+    // converse に渡った会話（messages[0] = 文書）に本文が含まれている
+    expect(JSON.stringify(h.llm.converseCalls[0]!.messages)).toContain("本文です");
     // 保存され一覧に出る
     const list = (await (
       await h.req("/api/documents/d1/reviews", { as: "u@example.com" })
@@ -51,7 +51,7 @@ describe("AI Review / Revision", () => {
     expect(res.headers.get("content-type")).toContain("text/event-stream");
     const text = await res.text();
     expect(text).toContain("event: delta");
-    expect(text).toContain("chunk-2");
+    expect(text).toContain("REVIEW(anthropic/claude-x)"); // converse の onDelta が流す本文
     expect(text).toContain("event: done");
     // ストリームでも保存される
     const list = (await (
@@ -150,10 +150,10 @@ describe("AI Review / Revision", () => {
     });
     expect(res.status).toBe(200);
 
-    // fake GitHub が repo と復号済み PAT を受け取り、取得本文が LLM プロンプトに入る
+    // fake GitHub が repo と復号済み PAT を受け取り、取得本文が converse の文書に入る
     expect(h.github.calls).toEqual([{ repo: "owner/repo", pat: "ghp_secret" }]);
-    const prompt = h.llm.calls.at(-1)!.prompt;
-    expect(prompt).toContain("FAKE-README of owner/repo");
+    const messages = JSON.stringify(h.llm.converseCalls.at(-1)!.messages);
+    expect(messages).toContain("FAKE-README of owner/repo");
   });
 
   it("revision: doc×user で1件に upsert・delete で消える", async () => {
