@@ -153,19 +153,64 @@ function toAnthropicTool(t: ToolDef): unknown {
   return { name: t.name, description: t.description, input_schema: t.inputSchema };
 }
 
-// raw（anthropic ブロック形）messages を openai/プレーン用の素テキストへ畳む。
-// 非 anthropic 経路は tool 非対応＝単発に縮退するので messages は user 1件のみ。
-function toPlainMessages(system: string | undefined, messages: unknown[]): { role: string; content: string }[] {
-  const out: { role: string; content: string }[] = [];
+function toOpenAiTool(t: ToolDef): unknown {
+  return { type: "function", function: { name: t.name, description: t.description, parameters: t.inputSchema } };
+}
+
+type IrBlock = {
+  type?: string;
+  text?: string;
+  id?: string;
+  name?: string;
+  input?: unknown;
+  tool_use_id?: string;
+  content?: unknown;
+};
+
+// ループが組み立てる正準 IR（Anthropic ブロック形）を OpenAI chat completions の messages へ翻訳する。
+// - user の text ブロック → {role:"user", content}
+// - user の tool_result ブロック → {role:"tool", tool_call_id, content}
+// - assistant の text/tool_use ブロック → {role:"assistant", content, tool_calls:[...]}
+// cache_control はここで自然に落ちる（OpenAI はプロンプトキャッシュ自動＝指定不要）。
+function toOpenAiMessages(system: string | undefined, messages: unknown[]): unknown[] {
+  const out: unknown[] = [];
   if (system) out.push({ role: "system", content: system });
   for (const m of messages as { role?: string; content?: unknown }[]) {
-    const content = Array.isArray(m.content)
-      ? (m.content as { type?: string; text?: string }[])
-          .filter((b) => b.type === "text")
-          .map((b) => b.text ?? "")
-          .join("")
-      : String(m.content ?? "");
-    out.push({ role: m.role ?? "user", content });
+    if (!Array.isArray(m.content)) {
+      out.push({ role: m.role ?? "user", content: String(m.content ?? "") });
+      continue;
+    }
+    const blocks = m.content as IrBlock[];
+    if (m.role === "assistant") {
+      const text = blocks
+        .filter((b) => b.type === "text")
+        .map((b) => b.text ?? "")
+        .join("");
+      const toolCalls = blocks
+        .filter((b) => b.type === "tool_use")
+        .map((b) => ({
+          id: b.id,
+          type: "function",
+          function: { name: b.name, arguments: JSON.stringify(b.input ?? {}) },
+        }));
+      const msg: Record<string, unknown> = { role: "assistant", content: text || null };
+      if (toolCalls.length) msg.tool_calls = toolCalls;
+      out.push(msg);
+    } else {
+      // user: tool_result は role:"tool" へ（assistant の tool_calls の直後に並ぶ）、text は user へ
+      for (const b of blocks.filter((b) => b.type === "tool_result")) {
+        out.push({
+          role: "tool",
+          tool_call_id: b.tool_use_id,
+          content: typeof b.content === "string" ? b.content : JSON.stringify(b.content ?? ""),
+        });
+      }
+      const text = blocks
+        .filter((b) => b.type === "text")
+        .map((b) => b.text ?? "")
+        .join("");
+      if (text) out.push({ role: "user", content: text });
+    }
   }
   return out;
 }
@@ -239,6 +284,64 @@ async function anthropicConverse(base: string, input: ConverseInput): Promise<Ll
   return { text, toolCalls, rawAssistant: { role: "assistant", content: rawContent } };
 }
 
+// OpenAI chat completions の tool use を 1 ターン分消費して LlmTurnResult（正準 IR）に正規化する。
+// ストリーミングの delta.tool_calls は index ごとに id/name/arguments が分割されて届くので index で蓄積する。
+async function openaiConverse(base: string, input: ConverseInput): Promise<LlmTurnResult> {
+  const body = {
+    model: input.model,
+    messages: toOpenAiMessages(input.system, input.messages),
+    stream: true,
+    ...(input.tools.length ? { tools: input.tools.map(toOpenAiTool) } : {}),
+  };
+  const res = await postJson(`${base}/v1/chat/completions`, authHeaders("openai", input.apiKey), body);
+
+  let text = "";
+  const toolAcc: { id?: string; name?: string; args: string }[] = []; // index ごと
+
+  for await (const ev of parseSseEvents(res)) {
+    const choice = (ev.choices as { delta?: Record<string, unknown> }[] | undefined)?.[0];
+    const delta = choice?.delta;
+    if (!delta) continue;
+    if (typeof delta.content === "string" && delta.content) {
+      text += delta.content;
+      input.onDelta?.(delta.content);
+    }
+    const tcs = delta.tool_calls as
+      | { index?: number; id?: string; function?: { name?: string; arguments?: string } }[]
+      | undefined;
+    if (Array.isArray(tcs)) {
+      for (const tc of tcs) {
+        const idx = tc.index ?? 0;
+        const slot = toolAcc[idx] ?? { args: "" };
+        if (tc.id) slot.id = tc.id;
+        if (tc.function?.name) slot.name = tc.function.name;
+        if (tc.function?.arguments) slot.args += tc.function.arguments;
+        toolAcc[idx] = slot;
+      }
+    }
+  }
+
+  const rawContent: unknown[] = [];
+  if (text) rawContent.push({ type: "text", text });
+  const toolCalls: LlmTurnResult["toolCalls"] = [];
+  toolAcc.forEach((slot, idx) => {
+    if (!slot?.name) return;
+    let parsed: unknown = {};
+    const a = slot.args.trim();
+    if (a) {
+      try {
+        parsed = JSON.parse(a);
+      } catch {
+        parsed = {};
+      }
+    }
+    const id = slot.id ?? `call_${idx}`;
+    rawContent.push({ type: "tool_use", id, name: slot.name, input: parsed });
+    toolCalls.push({ id, name: slot.name, input: parsed });
+  });
+  return { text, toolCalls, rawAssistant: { role: "assistant", content: rawContent } };
+}
+
 export function createLlmClient(): LlmClient {
   return {
     async complete(input) {
@@ -275,23 +378,12 @@ export function createLlmClient(): LlmClient {
     },
 
     async converse(input) {
-      const { base } = endpointsFor(input.provider);
-      if (input.provider === "anthropic") {
-        return anthropicConverse(base, input);
+      const { base } = endpointsFor(input.provider); // 未知プロバイダはここで throw（complete/stream と同じ）
+      if (input.provider === "openai") {
+        return openaiConverse(base, input);
       }
-      // Phase A: 非 anthropic は tool use 未対応＝単発テキストに縮退（tools は無視）。
-      // openai chat completions をストリーミングし、text を蓄積する。
-      const res = await postJson(`${base}${completionPath(input.provider)}`, authHeaders(input.provider, input.apiKey), {
-        model: input.model,
-        messages: toPlainMessages(input.system, input.messages),
-        stream: true,
-      });
-      let text = "";
-      for await (const chunk of parseSse(res, input.provider)) {
-        text += chunk;
-        input.onDelta?.(chunk);
-      }
-      return { text, toolCalls: [], rawAssistant: null };
+      // anthropic（および将来 anthropic 互換）。
+      return anthropicConverse(base, input);
     },
   };
 }
