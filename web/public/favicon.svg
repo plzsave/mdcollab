@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="mdcollab">
+  <style>
+    .bg { fill: #4f46e5; }
+    @media (prefers-color-scheme: dark) { .bg { fill: #6366f1; } }
+  </style>
+  <rect class="bg" x="1.5" y="1.5" width="29" height="29" rx="7" />
+  <text x="16" y="16.5" text-anchor="middle" dominant-baseline="central"
+        font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="15" font-weight="700" letter-spacing="-0.5" fill="#ffffff">md</text>
+</svg>

@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>mdcollab</title>
+    <!-- favicon: SVG 優先（ダーク対応）・古いブラウザは .ico・iOS は apple-touch-icon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script>
       // 初回描画前にダークを適用してチラつきを防ぐ（lib/theme.ts と同じキー/規則）。
       (function () {
