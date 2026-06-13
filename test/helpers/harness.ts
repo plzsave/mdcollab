@@ -11,17 +11,48 @@ import { createSession } from "../../src/auth/session";
 import { SESSION_COOKIE } from "../../src/auth/middleware";
 import type { Database } from "../../src/db/client";
 import type { DocumentStore } from "../../src/storage/types";
-import type { LlmClient, LlmInput } from "../../src/llm/types";
+import type { ConverseInput, LlmClient, LlmInput, LlmTurnResult } from "../../src/llm/types";
 import type { GithubClient } from "../../src/github/types";
 import type { AppConfig, Deps } from "../../src/env";
 
 const TEST_SECRET = "test-secret";
 
-/** ネットワーク不要の fake LlmClient。最後の入力を記録し、固定テキストを返す/流す。 */
-export function makeFakeLlm(): LlmClient & { calls: LlmInput[] } {
+// converse 用のスクリプト 1 ターン。text=テキストで完了、tool=ツール呼び出しを要求。
+export type ScriptTurn =
+  | { kind: "text"; text: string }
+  | { kind: "tool"; calls: { id?: string; name: string; input: unknown }[] };
+
+export const textTurn = (text: string): ScriptTurn => ({ kind: "text", text });
+export const toolTurn = (...calls: { id?: string; name: string; input: unknown }[]): ScriptTurn => ({
+  kind: "tool",
+  calls,
+});
+
+// messages[0]（user）のテキストブロックを連結（fake のデフォルト応答とアサーション用）。
+function firstUserText(messages: unknown[]): string {
+  const m0 = messages[0] as { content?: unknown } | undefined;
+  if (!m0 || !Array.isArray(m0.content)) return "";
+  return (m0.content as { type?: string; text?: string }[])
+    .filter((b) => b.type === "text")
+    .map((b) => b.text ?? "")
+    .join("");
+}
+
+export interface FakeLlm extends LlmClient {
+  calls: LlmInput[]; // complete/stream の記録（revision など）
+  converseCalls: ConverseInput[]; // converse の記録（review/review-repo）
+  script: ScriptTurn[]; // 先頭から消費。空ならデフォルト（テキスト1ターン）に縮退
+}
+
+/** ネットワーク不要の fake LlmClient。converse はスクリプト駆動でツールループを再現できる。 */
+export function makeFakeLlm(): FakeLlm {
   const calls: LlmInput[] = [];
+  const converseCalls: ConverseInput[] = [];
+  const script: ScriptTurn[] = [];
   return {
     calls,
+    converseCalls,
+    script,
     async complete(input) {
       calls.push(input);
       return `REVIEW(${input.provider}/${input.model}): ${input.prompt.slice(0, 20)}`;
@@ -35,17 +66,48 @@ export function makeFakeLlm(): LlmClient & { calls: LlmInput[] } {
     async listModels(provider) {
       return [`${provider}-model-a`, `${provider}-model-b`];
     },
+    async converse(input): Promise<LlmTurnResult> {
+      converseCalls.push(input);
+      const turn = script.shift();
+      if (turn?.kind === "tool") {
+        const toolCalls = turn.calls.map((c, i) => ({ id: c.id ?? `toolu_${i}`, name: c.name, input: c.input }));
+        return {
+          text: "",
+          toolCalls,
+          rawAssistant: {
+            role: "assistant",
+            content: toolCalls.map((c) => ({ type: "tool_use", id: c.id, name: c.name, input: c.input })),
+          },
+        };
+      }
+      // text ターン or デフォルト（スクリプト未指定）。デフォルトは単発レビューと等価。
+      const text =
+        turn?.kind === "text"
+          ? turn.text
+          : `REVIEW(${input.provider}/${input.model}): ${firstUserText(input.messages).slice(0, 20)}`;
+      input.onDelta?.(text);
+      return { text, toolCalls: [], rawAssistant: { role: "assistant", content: [{ type: "text", text }] } };
+    },
   };
 }
 
-/** ネットワーク不要の fake GithubClient。最後の (repo, pat) を記録し固定文脈を返す。 */
-export function makeFakeGithub(): GithubClient & { calls: { repo: string; pat: string }[] } {
+/** ネットワーク不要の fake GithubClient。(repo, pat) と fetchRepoFile 呼び出しを記録する。 */
+export function makeFakeGithub(): GithubClient & {
+  calls: { repo: string; pat: string }[];
+  fileCalls: { repo: string; path: string; pat: string }[];
+} {
   const calls: { repo: string; pat: string }[] = [];
+  const fileCalls: { repo: string; path: string; pat: string }[] = [];
   return {
     calls,
+    fileCalls,
     async fetchRepoContext(repo, pat) {
       calls.push({ repo, pat });
       return `リポジトリ: ${repo}\n\n# README（抜粋）\nFAKE-README of ${repo}`;
+    },
+    async fetchRepoFile(repo, path, pat) {
+      fileCalls.push({ repo, path, pat });
+      return `FAKE-FILE(${repo}:${path})`;
     },
   };
 }
