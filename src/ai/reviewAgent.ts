@@ -38,8 +38,11 @@ export interface RunReviewAgentResult {
 }
 
 function describeArg(input: unknown): string {
-  if (input && typeof input === "object" && "path" in input) {
-    return String((input as { path?: unknown }).path ?? "");
+  if (input && typeof input === "object") {
+    const o = input as Record<string, unknown>;
+    if (typeof o.path === "string") return o.path;
+    if (typeof o.query === "string") return o.query;
+    if (Object.keys(o).length === 0) return ""; // 引数なしツール（get_doc_threads / list_repo_tree）
   }
   try {
     return JSON.stringify(input);

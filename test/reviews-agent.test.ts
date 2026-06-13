@@ -132,7 +132,7 @@ describe("AI Review Agent（tool use ループ）", () => {
     expect(rows).toHaveLength(0);
   });
 
-  it("PAT 未設定の review-repo はツールなしで単発に縮退する", async () => {
+  it("PAT 未設定の review-repo は repo ツールが付かない（doc ツールのみ）", async () => {
     const h = await makeHarness();
     await seedMember(h, "u@example.com", "member");
     const key = await h.store.put("d1", 1, "# 文書\n本文");
@@ -149,15 +149,93 @@ describe("AI Review Agent（tool use ループ）", () => {
       method: "PUT",
       body: JSON.stringify({ repo: "owner/repo" }),
     });
-    // PAT 無し → tools 空 → converse 1 周（デフォルト応答）で完了
     const res = await h.req("/api/documents/d1/review-repo", {
       as: "u@example.com",
       method: "POST",
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(200);
-    expect(h.llm.converseCalls.at(-1)!.tools).toHaveLength(0);
+    // doc/workspace ツールは付くが、PAT 無しなので repo ツール（fetch_repo_file/list_repo_tree）は付かない
+    const toolNames = h.llm.converseCalls.at(-1)!.tools.map((t) => t.name);
+    expect(toolNames).toEqual(["get_doc_threads", "search_docs"]);
     expect(h.github.fileCalls).toHaveLength(0);
+    expect(h.github.treeCalls).toHaveLength(0);
+  });
+
+  it("list_repo_tree: tool_use でツリーを取得し結果が次ターンの会話に積まれる", async () => {
+    const h = await setupRepo();
+    h.llm.script.push(toolTurn({ name: "list_repo_tree", input: {} }), textTurn("ツリー確認済み"));
+
+    const res = await h.req("/api/documents/d1/review-repo", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { review: string; toolsUsed: string[] };
+    expect(body.review).toBe("ツリー確認済み");
+    expect(h.github.treeCalls).toEqual([{ repo: "owner/repo", pat: "ghp_secret" }]);
+    expect(JSON.stringify(h.llm.converseCalls.at(-1)!.messages)).toContain("src/a.ts");
+  });
+
+  it("get_doc_threads: tool_use で当該 doc のスレッド本文を tool_result に積む", async () => {
+    const h = await setupRepo();
+    await h.db.insert(schema.threads).values({
+      id: "t1",
+      documentId: "d1",
+      anchorText: "ここ",
+      status: "open",
+      createdBy: "u@example.com",
+    });
+    await h.db
+      .insert(schema.comments)
+      .values({ id: "c1", threadId: "t1", content: "曖昧な表現です", author: "reviewer@example.com" });
+
+    h.llm.script.push(toolTurn({ name: "get_doc_threads", input: {} }), textTurn("スレッド反映済み"));
+
+    const res = await h.req("/api/documents/d1/review", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const messages = JSON.stringify(h.llm.converseCalls.at(-1)!.messages);
+    expect(messages).toContain("曖昧な表現です");
+    expect(messages).toContain("[open]");
+  });
+
+  it("search_docs: tool_use でタイトル一致の他文書を返す（当該 doc は除外）", async () => {
+    const h = await setupRepo();
+    await h.db
+      .insert(schema.documents)
+      .values({ id: "d2", title: "関連メモ", version: 1, createdBy: "u@example.com" });
+
+    h.llm.script.push(toolTurn({ name: "search_docs", input: { query: "関連" } }), textTurn("関連文書を確認"));
+
+    const res = await h.req("/api/documents/d1/review", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { toolsUsed: string[] };
+    expect(body.toolsUsed).toEqual(["search_docs:関連"]); // describeArg が query を表示
+    const messages = JSON.stringify(h.llm.converseCalls.at(-1)!.messages);
+    expect(messages).toContain("関連メモ");
+    expect(messages).toContain("id: d2");
+    expect(messages).not.toContain("id: d1"); // 当該 doc は除外
+  });
+
+  it("plain review もツール（doc/workspace）を持つ", async () => {
+    const h = await setupRepo();
+    const res = await h.req("/api/documents/d1/review", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const toolNames = h.llm.converseCalls.at(-1)!.tools.map((t) => t.name);
+    expect(toolNames).toEqual(["get_doc_threads", "search_docs"]);
   });
 });
 

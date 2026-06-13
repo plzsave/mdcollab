@@ -6,8 +6,8 @@
 本書は、これを **ネイティブ tool use ループ**（LangChain 不採用）へ引き上げ、
 「**参照リポジトリの実ファイルを自分で読んで根拠付きでレビューする**」エージェントにする設計を定める。
 
-> ステータス: **Phase A 実装済み**（縦切り最小・Anthropic 経路・ループ・方式 X・キャッシュ・テスト）。Phase B〜D は未着手。
-> 出典: 本設計のレビュー対象実装は `src/routes/reviews.ts` / `src/llm/` / `src/github/`。実装本体は `src/ai/reviewAgent.ts`。
+> ステータス: **Phase A+B 実装済み**。Phase C（OpenAI converse パリティ）/ D（web 進捗チップ）は未着手。
+> 出典: 本設計のレビュー対象実装は `src/routes/reviews.ts` / `src/llm/` / `src/github/`。ループ本体は `src/ai/reviewAgent.ts`、ツール工場は `src/ai/reviewTools.ts`。
 
 ## 実装メモ（Phase A・設計擬似コードからの差分）
 
@@ -16,6 +16,18 @@
 1. **review-repo は README 前置き＋ツールの「和集合」**。§1 表の「after」は README dump 廃止と読めるが、実装は `fetchRepoContext`（説明/README 8000字）を messages[0] に前置きしたまま `fetch_repo_file` ツールも渡す。前置きは repo のオリエンテーション、ツールは参照ファイルの深掘り＝strictly more capable。前置きはレビュー中不変なのでキャッシュも効く。
 2. **MAX_TURNS 到達は `truncated:true`**（擬似コードの末尾 return は `false` だったが §10/§13 に従い修正）。`completed` フラグで「toolCalls 空で正常終了」と「ターン尽きてまだツール要求中」を区別する。
 3. **非 anthropic プロバイダは converse で単発テキストに縮退**（tools 無視）。`review` ルートも全プロバイダがループ経由になるため、OpenAI ユーザーの素レビューを壊さないための退避。OpenAI の tool use パリティは Phase C。
+
+### 実装メモ（Phase B）
+
+ツール工場を `src/ai/reviewTools.ts` に集約（`reviews.ts` を薄く保つ）。ルート→ツール割当:
+
+- **review** → `[get_doc_threads, search_docs]`（PAT 不要・members 限定の doc/workspace ツール）。plain review もマルチツールのエージェントに昇格。
+- **review-repo** → 上記 + `[fetch_repo_file, list_repo_tree]`（PAT ありのとき）。PAT 無しなら repo ツールは付かず doc ツールのみ。
+
+判断:
+- **`search_docs` は title 検索のみ**。本文は R2/GCS にあり DB は `documents.title` しか持たないため。LIKE 値は drizzle がパラメータ化（注入安全）。当該 doc・archived は除外。
+- **`get_doc_threads` は当該 doc 限定**（requireMember 済み）。`list_repo_tree` は default branch を解決して git/trees を recursive 取得・500件上限。すべて never throw。
+- `buildSystem` はツール名を列挙せず汎用方針に留め、具体は各ツールの description に委ねる（キャッシュ安定・追加に強い）。
 
 `reviews` の JSON/SSE 応答に `toolsUsed` / `truncated` を追加済み（web 側は未消費＝Phase D の進捗チップで利用予定。既存 SSE パーサは未知 `event: tool` を無視するので後方互換）。
 
@@ -335,13 +347,13 @@ Task Budgets（beta）等は Phase A では過剰。`MAX_TURNS` で十分。
 
 **Phase A だけで「参照リポジトリの実ファイルを自分で読んで根拠付きレビュー」が動く**＝Tier 1→2 のジャンプを最小コストで実証できる。
 
-### Phase B ツールのプレビュー（今は作らない）
+### Phase B ツール（実装済み）
 
-| ツール | スコープ・認可 |
-|---|---|
-| `list_repo_tree()` | 固定 repo・GitHub trees API・PAT |
-| `get_doc_threads()` | 当該 doc の threads/comments（requireMember 済み） |
-| `search_docs(query)` | ワークスペース内・members 限定・LIKE はパラメータ化・§9 と同じ透明性表示 |
+| ツール | スコープ・認可 | 実装メモ |
+|---|---|---|
+| `list_repo_tree()` | 固定 repo・GitHub trees API・PAT | default branch 解決→recursive・500件上限 |
+| `get_doc_threads()` | 当該 doc の threads/comments（requireMember 済み） | open/resolved + 本文を整形 |
+| `search_docs(query)` | ワークスペース内・members 限定・LIKE はパラメータ化 | **title 検索のみ**（本文は DB 外）・当該 doc/archived 除外 |
 
 ---
 
