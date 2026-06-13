@@ -8,6 +8,17 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# .env があれば読み込む（CLOUDFLARE_ACCOUNT_ID など wrangler が使う値も含む）。CI には無い。
+if [ -f .env ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . ./.env
+  set +a
+fi
+
+echo "==> generate wrangler.toml (from wrangler.template.toml + env)"
+./scripts/gen-wrangler.sh
+
 echo "==> deps (root + web)"
 bun install --frozen-lockfile
 (cd web && bun install --frozen-lockfile)

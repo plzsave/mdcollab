@@ -66,6 +66,34 @@ S3 互換ストアは **SeaweedFS** を採用（MinIO/LocalStack 不使用・軽
 別実装にしたい場合は `docker-compose.yml` の `s3` サービスを差し替え、`S3_ENDPOINT` を合わせるだけ
 （アプリは path-style なので無改修）。本物の Google ログインを試す手順は **[docs/google-oauth-setup.md](docs/google-oauth-setup.md)**。
 
+## 自分の環境へデプロイ（Cloudflare）
+
+このリポジトリは**個人のアカウント値をコミットしない**設計。`wrangler.toml` は
+`wrangler.template.toml` + 環境変数から **`scripts/gen-wrangler.sh` が生成**する（生成物は gitignore 済み）。
+fork した人は **tracked ファイルを編集せず**、自分の値を `.env`（ローカル）/ GitHub Variables・Secrets（CI）に入れるだけ。
+
+```bash
+# 1) ランタイム秘密を投入（一度だけ）
+wrangler secret put SESSION_SECRET      # ほか ENCRYPTION_KEY / S3_ACCESS_KEY_ID /
+                                        # S3_SECRET_ACCESS_KEY / GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
+# 2) 非秘密の設定を .env に
+cp .env.example .env                    # BASE_URL / S3_ENDPOINT / S3_BUCKET / HYPERDRIVE_ID 等を記入
+                                        # 独自ドメインを使うなら CUSTOM_DOMAIN も設定（未設定なら workers.dev）
+# 3) デプロイ（gen → web build → wrangler deploy）
+bun run deploy
+```
+
+**CI（GitHub Actions）で自動デプロイする場合**、repo の設定に登録:
+
+| 種別 | キー |
+|---|---|
+| Secrets | `CLOUDFLARE_API_TOKEN`（Workers Scripts Edit ＋ 独自ドメイン時は Zone Workers Routes/DNS Edit）/ `CLOUDFLARE_ACCOUNT_ID` |
+| Variables | `BASE_URL` / `CUSTOM_DOMAIN`(任意) / `S3_ENDPOINT` / `S3_BUCKET` / `HYPERDRIVE_ID` |
+
+状態を持つインフラ（R2 / Hyperdrive / WAF）は Terraform/OpenTofu 管理。
+手順は **[infra/envs/mdcollab-cf-personal/IMPORT.md](infra/envs/mdcollab-cf-personal/IMPORT.md)**、
+独自ドメイン + WAF レート制限は **[docs/custom-domain-waf-ratelimit.md](docs/custom-domain-waf-ratelimit.md)**。
+
 ## 実装済み / 未実装
 
 進捗の正は **[docs/TODO.md](docs/TODO.md)**（残タスク台帳）。
