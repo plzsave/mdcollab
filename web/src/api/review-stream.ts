@@ -5,10 +5,19 @@ export interface ReviewDone {
   provider: string;
   model: string;
   repo?: string;
+  toolsUsed?: string[];
+  truncated?: boolean;
+}
+
+// エージェントが呼んだツール（透明性表示用）。data は reviewAgent の onEvent("tool") に対応。
+export interface ReviewToolEvent {
+  name: string;
+  arg: Record<string, unknown>;
 }
 
 interface StreamHandlers {
   onDelta: (text: string) => void;
+  onTool?: (tool: ReviewToolEvent) => void;
   onDone: (meta: ReviewDone) => void;
 }
 
@@ -69,7 +78,13 @@ export async function streamReview(
       const data = dataLines.join("\n");
 
       if (event === "delta") handlers.onDelta(data);
+      else if (event === "tool") handlers.onTool?.(JSON.parse(data || "{}") as ReviewToolEvent);
       else if (event === "done") handlers.onDone(JSON.parse(data || "{}") as ReviewDone);
+      else if (event === "error") {
+        // ループ途中の失敗（converse throw 等）。SSE 開始後なので HTTP 500 は返せず error イベントで通知される。
+        const msg = (JSON.parse(data || "{}") as { message?: string }).message;
+        throw new ApiError(500, "STREAM_ERROR", msg || "レビューに失敗しました");
+      }
     }
   }
 }
