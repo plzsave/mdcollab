@@ -6,8 +6,9 @@ Markdown 共同編集 + コメントスレッド + AI レビュー。GAS 版 `md
 差は **アダプタ層（DB / 本体ストア / 認証 / 非同期 / CI）だけ**。設計の根拠は別リポの計画書
 （`md-collab-migration-plan.md`）と API 契約（`mdcollab-api-inventory.md`）を参照。
 
-> ⚠ これは **Phase 0（土台）のスケルトン**。読み取り系の一部ルートと各シームの実装パターンを通しただけで、
-> 全 API（`mdcollab-api-inventory.md` の 45 RPC）は未実装。
+> ✅ **本番稼働中**（`md.yskbase.com`・Cloudflare）。バックエンド API は GAS 版パリティ到達、フロント（React/Vite SPA）一式、
+> AI レビューの **tool use エージェント化**（参照リポジトリ・コメントスレッド・関連文書を自分で読んで根拠付きレビュー）まで実装済み。
+> 残タスクは [GitHub issues](https://github.com/plzsave/mdcollab/issues) を正とする（移行台帳は [docs/archive/TODO.md](docs/archive/TODO.md) にアーカイブ）。
 
 ## スタック
 
@@ -15,10 +16,12 @@ Markdown 共同編集 + コメントスレッド + AI レビュー。GAS 版 `md
 |---|---|---|
 | API | Hono | Web標準。Workers/Node/Lambda 共通 |
 | DB | Postgres + Drizzle | 個人=Neon(Hyperdrive) / 職場=RDS。`prepare:false` |
-| 本体ストア | `DocumentStore` I/F | `S3Storage`(R2/S3/GCS, aws4fetch) / `DriveStorage`(Phase 0で実装) |
+| 本体ストア | `DocumentStore` I/F | `S3Storage`(R2/S3/GCS, aws4fetch) を採用。`DriveStorage` は退役（方針A=全移行で R2 のみ・stub 残置） |
+| フロント | React 19 + Vite + TanStack Router/Query + Tailwind v4 | SPA（`web/`）。Worker の `[assets]` で同居配信 |
+| AI | anthropic / openai | `complete`/`stream` ＋ tool use ループ（`converse`）。レビューはエージェント化済み |
 | 認証 | 自前 Google OIDC | jose。Cloudflare Access は不採用 |
-| IaC | Terraform | `infra/modules` + `infra/envs/mdcollab-*` |
-| CI | 個人=GitHub Actions / 職場=CodePipeline | デプロイ実体は `scripts/` に集約 |
+| IaC | Terraform / OpenTofu | `infra/modules` + `infra/envs/mdcollab-{cf-personal,aws-workplace,gcp}`。個人は R2/Hyperdrive を import 済み |
+| CI | 個人=GitHub Actions / 職場=CodePipeline(後回し) | デプロイ実体は `scripts/` に集約。main push で自動デプロイ |
 
 ## 構成
 
@@ -26,13 +29,20 @@ Markdown 共同編集 + コメントスレッド + AI レビュー。GAS 版 `md
 src/
   app.ts              # ランタイム非依存のコア（createApp(deps)）
   env.ts              # Deps / AppConfig
+  crypto.ts           # AIキー/PAT の AES-GCM 暗号化（Web Crypto）
+  notify.ts           # 通知の副作用発火（mention / reply / resolve）
   adapters/           # 移植シーム: cloudflare.ts(Workers) / node.ts(Node/Lambda)
   auth/               # oidc.ts / session.ts / middleware.ts（requireMember/Owner）
   db/                 # schema.ts(§6.1) / client.ts(postgres.js)
-  storage/            # types.ts(DocumentStore) / s3.ts / drive.ts / index.ts(factory)
-  routes/             # auth, state, folders, documents（API 契約の一部を実装）
+  storage/            # types.ts(DocumentStore) / s3.ts / drive.ts(退役) / index.ts(factory)
+  llm/                # types.ts / providers.ts（anthropic・openai の実HTTP・converse=tool use）
+  github/             # types.ts / client.ts（review-repo のファイル取得・ツリー）
+  ai/                 # reviewAgent.ts（tool use ループ）/ reviewTools.ts（ツール工場）
+  routes/             # 全11本: auth, state, setup, folders, documents, statuses,
+                      #   members, comments, notifications, ai, reviews
+web/                  # React/Vite SPA（フロント一式）
 infra/                # Terraform（modules + envs/mdcollab-{cf-personal,aws-workplace,gcp}）
-scripts/              # deploy-cf.sh / deploy-aws.sh（CI はこれを呼ぶだけ）
+scripts/              # deploy-cf.sh / deploy-aws.sh / gen-wrangler.sh（CI はこれを呼ぶだけ）
 ```
 
 ## 開発
@@ -96,17 +106,26 @@ bun run deploy
 
 ## 実装済み / 未実装
 
-進捗の正は **[docs/TODO.md](docs/TODO.md)**（残タスク台帳）。
+進捗の正は **[GitHub issues](https://github.com/plzsave/mdcollab/issues)**（移行台帳は [docs/archive/TODO.md](docs/archive/TODO.md) にアーカイブ）。
 
-- ✅ ポータブルコア・アダプタ2種（CF/Node）・Drizzle スキーマ・DocumentStore(S3)・OIDC/セッション・
-  `requireMember/Owner`・Terraform/CI/scripts 骨組み。
-- ✅ API（**バックエンドはパリティ到達**）: `setup` / `state` / `folders`(list/CRUD/文書一覧) / `documents`(全10) /
+- ✅ ポータブルコア・アダプタ2種（CF/Node）・Drizzle スキーマ・DocumentStore(S3/R2)・OIDC/セッション・
+  `requireMember/Owner`・Terraform/CI/scripts。
+- ✅ API（**バックエンドはパリティ到達**）: `setup` / `state` / `folders` / `documents`(全10) /
   `statuses` / `members` / `threads`・`comments`(7) / `notifications`(3) / `ai`(settings・secrets 7) /
   `reviews`(review・revision 5) ＋通知発火。linkFolder のみ保留（方針A）。
 - ✅ 横断: 通知発火・AIキー暗号化保存(AES-GCM)・AIプロバイダ層(anthropic/openai)・SSEストリーミング。
-- ✅ テスト: pglite + メモリストア + fake LLM の結合テスト 60 本（docker 不要・`bun run test`）。
-- ⬜ 残り: 着手順5の小物（`/api/setup`・folder rename/delete/link）、`DriveStorage`、
-  データ移行スクリプト、Terraform 実リソース。→ 台帳参照。
+- ✅ **フロント**（`web/`）: 文書一覧/エディタ(409体験)・コメントスレッド・ステータスボード・
+  AI レビュー/改稿・通知・メンバー管理・取込/出力・ダークモード。本番 Worker に同居配信。
+- ✅ **AI レビューのエージェント化**（tool use ループ・LangChain 不採用）: `fetch_repo_file` / `list_repo_tree` /
+  `get_doc_threads` / `search_docs`(本文全文検索)。Anthropic/OpenAI 両対応・プロンプトキャッシュ・
+  読了ファイルの透明性表示・暴走ガード。設計は **[docs/ai-review-agent.md](docs/ai-review-agent.md)**。
+- ✅ インフラ/CI: Cloudflare 本番稼働（独自ドメイン+WAF レート制限）・OpenTofu で R2/Hyperdrive 管理・
+  GitHub Actions 自動デプロイ。
+- ✅ テスト: pglite + メモリストア + fake LLM の結合テスト **112 本**（docker 不要・`bun run test`）。
+- ⬜ 残り（issue 化済み）: [AWS デプロイ一式 #7](https://github.com/plzsave/mdcollab/issues/7)（後回し）/
+  [入力サイズ上限 #8](https://github.com/plzsave/mdcollab/issues/8) /
+  [CSP #9](https://github.com/plzsave/mdcollab/issues/9) /
+  [esbuild advisory #10](https://github.com/plzsave/mdcollab/issues/10)。
 
 ### テスト方針
 `test/helpers/harness.ts` が **pglite（プロセス内 Postgres）に本番マイグレーションを適用** + **メモリ実装の

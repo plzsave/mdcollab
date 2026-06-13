@@ -1,7 +1,16 @@
-# mdcollab 残タスク台帳
+# mdcollab 残タスク台帳（アーカイブ・完了）
 
-GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcollab-api-inventory.md`](../../mdcollab-api-inventory.md)（45 RPC / 46 エンドポイント）と
-移行計画書 [`md-collab-migration-plan.md`](../../md-collab-migration-plan.md)。
+> 📦 **この台帳は役目を終えました（2026-06-13 アーカイブ）。** 脱 GAS 移行のフェーズ 1〜3（バックエンド API パリティ → インフラ/CI → フロント）に加え、AI レビューのエージェント化（A〜D）と search_docs 全文検索まで完了し本番稼働中（`md.yskbase.com`）。
+> 以降に残った少量のタスクは **GitHub issue へ移行**しました:
+> - AWS デプロイ一式 → [#7](https://github.com/plzsave/mdcollab/issues/7)
+> - 入力サイズ上限 → [#8](https://github.com/plzsave/mdcollab/issues/8)
+> - CSP 導入 → [#9](https://github.com/plzsave/mdcollab/issues/9)
+> - esbuild advisory 追従 → [#10](https://github.com/plzsave/mdcollab/issues/10)
+>
+> 本ファイルは移行の経緯・判断の記録として残置（以後は編集しない）。現状の進捗は GitHub issues を正とする。
+
+GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcollab-api-inventory.md`](../../../mdcollab-api-inventory.md)（45 RPC / 46 エンドポイント）と
+移行計画書 [`md-collab-migration-plan.md`](../../../md-collab-migration-plan.md)。
 
 - 凡例: `[x]` 実装済み / `[ ]` 未実装
 - 現状: **フェーズ1（バックエンド API）完了＝パリティ到達**。方針A(全移行)確定、linkFolder のみ保留（DriveStorage と同時期）。
@@ -95,7 +104,7 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 方針: **軽い入り方**（wrangler 手動デプロイで本番起動）→ 後で `terraform import` で一括管理へ。
 - [x] **Cloudflare 実起動完了**（2026-06-10）。`https://mdcollab-api.yskab-dev.workers.dev`。
   Workers + Hyperdrive→Neon + R2 + 自前 Google OAuth + setup(owner化) + 文書 R2 往復まで本番疎通確認済み。
-  手順書 [`docs/cloudflare-deploy.md`](cloudflare-deploy.md)。secrets は `wrangler secret`（SESSION/ENCRYPTION/S3×2/GOOGLE×2）。
+  手順書 [`docs/cloudflare-deploy.md`](../cloudflare-deploy.md)。secrets は `wrangler secret`（SESSION/ENCRYPTION/S3×2/GOOGLE×2）。
 - [x] **Terraform(cf-personal) 実リソース化 完了**（2026-06-12・R2/Hyperdrive のみ・Worker は wrangler 継続）。
   OpenTofu で import 済み・`tofu plan` 差分ゼロ（`infra/envs/mdcollab-cf-personal/`・provider 5.19・state ローカル）。
   Hyperdrive は password/mtls を `ignore_changes`。手順 `IMPORT.md`。
@@ -156,7 +165,7 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 - [~] レート制限: `/api/auth/*` に Workers `[[ratelimits]]`(AUTH_LIMITER・IP 30/60s) を導入（cloudflare アダプタ・フェイルオープン）。
   ただし Cloudflare の同バインディングは公式に **permissive/結果整合/コロ単位の best-effort**（正確な計数ではない）で、実機バースト(50〜100)では 429 を返さなかった＝**持続的乱用のコストを上げる程度**。
   **厳密な制限が要る場合は独自ドメイン + WAF レート制限ルール（ゾーン単位・正確）へ。workers.dev では WAF レート制限は使えない。**
-  → 採用方針: **2（独自ドメイン+WAF）**。手順書 [`docs/custom-domain-waf-ratelimit.md`](custom-domain-waf-ratelimit.md)。
+  → 採用方針: **2（独自ドメイン+WAF）**。手順書 [`docs/custom-domain-waf-ratelimit.md`](../custom-domain-waf-ratelimit.md)。
   進捗(2026-06-13): 独自ドメイン `md.yskbase.com` へ移行完了（wrangler.toml の `[[routes]] custom_domain` ＋ `workers_dev=false`・BASE_URL/OAuth 切替・ログイン疎通確認済み）。
   WAF レート制限ルールも `tofu apply` 済み（`infra/.../waf.tf`・`cloudflare_ruleset.auth_ratelimit`）。**無料プラン制約**で `period`/`mitigation_timeout` は 10秒固定・1ルールのみのため、実構成は **IP 5req/10s で 10秒 Block**（30req/60s と同平均レート）。`period=60` 等は `not entitled` で 400。長い窓/複数ルールは Pro 以上。
   §6 検証 OK（`/api/auth/login` 60連打→ 20×302 / 40×429・閾値超を正確に Block）。§5 AUTH_LIMITER は **残置で確定**（多層防御・フェイルオープン保険・無作業。WAF 障害時の保険として無害）。→ **独自ドメイン+WAF 一式 完了。**
@@ -166,15 +175,15 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 
 ---
 
-## H. AI レビューのエージェント化（設計済み・未実装）
-現状のAIレビューは「文書を1回 LLM に投げるだけ」の単発呼び出し（Tier 0〜1）。これを **ネイティブ tool use ループ**
-（LangChain 不採用）へ引き上げ、参照リポジトリの実ファイルをモデルが自分で読んで根拠付きレビューする
-エージェント（Tier 2）にする。設計確定・**着手は独自ドメイン+WAF 完了後**。
-- [ ] 設計書 [`docs/ai-review-agent.md`](ai-review-agent.md)（IF変更・ループ・ツール・キャッシュ・セキュリティ・テストまで確定）
-- [ ] Phase A: `fetch_repo_file` 1本・Anthropic 経路・方式X・プロンプトキャッシュ・テスト（縦切り最小）
-- [ ] Phase B: `list_repo_tree` / `get_doc_threads` / `search_docs`
-- [ ] Phase C: OpenAI `converse` パリティ ／ Phase D: web の `tool` イベント表示
-- 横断: プロンプトインジェクション対策（リポジトリ固定＋読了ファイルの透明性表示＋入力不信任宣言）・暴走ガード（MAX_TURNS=6）
+## H. AI レビューのエージェント化（✅ 完了・2026-06-13）
+単発 LLM 呼び出し（Tier 0〜1）を **ネイティブ tool use ループ**（LangChain 不採用）へ引き上げ、参照リポジトリの実ファイル・
+コメントスレッド・関連文書をモデルが自分で読んで根拠付きレビューするエージェント（Tier 2）にした。Anthropic/OpenAI 両対応・本番稼働。
+- [x] 設計書 [`docs/ai-review-agent.md`](../ai-review-agent.md)（実装済み・全フェーズの実装メモ付き）
+- [x] Phase A: `fetch_repo_file`・Anthropic 経路・方式X・プロンプトキャッシュ・テスト（縦切り最小）
+- [x] Phase B: `list_repo_tree` / `get_doc_threads` / `search_docs`
+- [x] Phase C: OpenAI `converse` パリティ ／ Phase D: web の `tool` イベント表示（進捗チップ・透明性）
+- [x] 追加: `search_docs` を本文全文検索＋スニペットへ拡張（`documents.body` 同期列）
+- 横断: プロンプトインジェクション対策（リポジトリ固定＋読了ファイルの透明性表示＋入力不信任宣言）・暴走ガード（MAX_TURNS=6 / MAX_TOOL_CALLS=12）
 
 ---
 
