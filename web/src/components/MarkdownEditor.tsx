@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../api/client";
 import { useDeleteDocument, useSaveDocument, useThreads } from "../api/hooks";
 import { renderMarkdown } from "../lib/markdown";
 import { applyHighlights } from "../lib/highlight";
+import { clearDraft, loadDraft, saveDraft } from "../lib/draft";
 import { CommentPanel, type DraftAnchor } from "./CommentPanel";
 import { AiReviewPanel } from "./AiReviewPanel";
 import { IconChat, IconMore } from "./icons";
 import { useConfirm } from "./ui/confirm";
 import { useToast } from "./ui/toast";
+import { Modal } from "./ui/Modal";
 import type { DocumentFull } from "../api/types";
 
 type Mode = "edit" | "split" | "preview";
@@ -54,6 +56,36 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
 
   const dirty = content !== savedContent;
   const html = useMemo(() => renderMarkdown(content), [content]);
+
+  // 未保存の下書き復元バナー（#22）。マウント時に doc 本文と異なる下書きがあれば提示。
+  const [restorable, setRestorable] = useState<string | null>(() => {
+    const d = loadDraft(doc.id);
+    return d && d.content !== doc.content ? d.content : null;
+  });
+
+  // 離脱ガード（#22）: dirty の間は beforeunload（タブ閉じ/リロード）と
+  // アプリ内ナビ（サイドバー遷移など）の両方をブロックする。
+  // ただし削除による遷移はガード対象外（文書自体が消えるため）。
+  const skipGuardRef = useRef(false);
+  const blocker = useBlocker({
+    shouldBlockFn: () => !skipGuardRef.current && dirty,
+    enableBeforeUnload: () => dirty,
+    withResolver: true,
+  });
+
+  // dirty な本文を localStorage へ自動退避（デバウンス）。
+  // クリーンになったら下書きを破棄するが、未操作の復元候補（restorable）が
+  // 残っている初期マウント時は消さない（復元前に消えるのを防ぐ）。
+  useEffect(() => {
+    if (!dirty) {
+      if (restorable === null) clearDraft(doc.id);
+      return;
+    }
+    const t = window.setTimeout(() => {
+      saveDraft(doc.id, { content, baseVersion, savedAt: Date.now() });
+    }, 800);
+    return () => window.clearTimeout(t);
+  }, [content, dirty, baseVersion, doc.id, restorable]);
 
   // プレビューは手動で innerHTML を設定し、その上にコメントアンカーのハイライトを重ねる。
   // （dangerouslySetInnerHTML だと React 管理下と DOM 直接操作が衝突するため ref 制御にする）
@@ -163,6 +195,8 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
     if (!ok) return;
     del.mutate(doc.id, {
       onSuccess: () => {
+        skipGuardRef.current = true; // 削除遷移は離脱ガードを通さない
+        clearDraft(doc.id);
         toast.success("文書を削除しました");
         navigate(
           doc.folderId
@@ -202,6 +236,16 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
     setBaseVersion(latest.version);
     setConflict(null);
     qc.invalidateQueries({ queryKey: ["document", doc.id] });
+  };
+
+  // 下書き復元バナーの操作（#22）。
+  const restoreDraft = () => {
+    if (restorable !== null) setContent(restorable);
+    setRestorable(null);
+  };
+  const discardDraft = () => {
+    clearDraft(doc.id);
+    setRestorable(null);
   };
 
   return (
@@ -325,6 +369,26 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
           </p>
         )}
 
+        {restorable !== null && (
+          <div className="mt-3 flex items-center justify-between rounded-md border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm text-sky-800 dark:border-sky-900/60 dark:bg-sky-900/30 dark:text-sky-200">
+            <span>保存されていない下書きが見つかりました。復元しますか？</span>
+            <div className="flex gap-2">
+              <button
+                onClick={restoreDraft}
+                className="rounded bg-sky-600 px-3 py-1 text-xs font-medium text-white hover:bg-sky-700"
+              >
+                復元
+              </button>
+              <button
+                onClick={discardDraft}
+                className="rounded border border-sky-300 px-3 py-1 text-xs text-sky-800 hover:bg-sky-100 dark:border-sky-800 dark:text-sky-200 dark:hover:bg-sky-900/50"
+              >
+                破棄
+              </button>
+            </div>
+          </div>
+        )}
+
         {conflict !== null && (
           <div className="mt-3 flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/40 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-200">
             <span>他の人が更新しました（サーバは v{conflict}）。あなたの編集は保持しています。</span>
@@ -404,6 +468,40 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
           onClose={() => setShowReview(false)}
         />
       )}
+
+      {/* アプリ内ナビ離脱の確認（#22）。beforeunload は useBlocker が別途担保。 */}
+      <Modal
+        open={blocker.status === "blocked"}
+        onClose={() => blocker.reset?.()}
+        labelledBy="leave-guard-title"
+        describedBy="leave-guard-desc"
+      >
+        <h2 id="leave-guard-title" className="text-base font-semibold">
+          未保存の変更があります
+        </h2>
+        <p id="leave-guard-desc" className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          保存していない編集があります。このページを離れると変更が失われます。
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => blocker.reset?.()}
+            className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            編集を続ける
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              clearDraft(doc.id);
+              blocker.proceed?.();
+            }}
+            className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+          >
+            移動する（破棄）
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
