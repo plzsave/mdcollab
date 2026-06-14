@@ -5,7 +5,7 @@ Workers の `[[ratelimits]]` バインディングは公式に *best-effort（pe
 中規模バーストを厳密にブロックしない。**独自ドメイン（Cloudflare ゾーン）に載せると、ダッシュボードの
 手作業なしに（Terraform + wrangler）厳密なレート制限が設定できる。**
 
-> ステータス（2026-06-13）: **§1〜4 完了**。本番ドメイン `md.yskbase.com` に移行し、
+> ステータス（2026-06-13）: **§1〜4 完了**。本番ドメイン `md.example.com` に移行し、
 > health・ログイン（Google→/api/auth/callback）疎通確認済み。`workers_dev = false` で
 > workers.dev 経路も無効化済み（入口は独自ドメインのみ）。
 > WAF レート制限ルールも `tofu apply` 済み（`cloudflare_ruleset.auth_ratelimit`）。
@@ -13,7 +13,7 @@ Workers の `[[ratelimits]]` バインディングは公式に *best-effort（pe
 > 正確に 429 Block される実機確認 OK（旧 Workers binding ではバーストで 429 が返らなかった）。
 > §5 AUTH_LIMITER は **残置で確定**（多層防御・フェイルオープン保険・無作業）。**＝本書の作業 完了。**
 >
-> 無料プラン実値（重要）: yskbase.com は **Cloudflare 無料プラン**のため、レート制限ルールの
+> 無料プラン実値（重要）: example.com は **Cloudflare 無料プラン**のため、レート制限ルールの
 > **`period`（カウント窓）は 10 秒固定・`mitigation_timeout`（ブロック継続）も 10 秒**に制限される
 > （`period=60` は `not entitled` で 400）。そのため実構成は **5 req / 10s per IP**（30req/60s と
 > 同じ平均レート 0.5req/秒）。より長い窓・長いブロック・複数ルールが要るなら Pro 以上。
@@ -123,7 +123,7 @@ Workers & Pages → `mdcollab-api` → Settings → Domains & Routes →
    CI 用 `CLOUDFLARE_API_TOKEN`（GitHub Secret）に **Zone · Workers Routes · Edit**（＋ DNS Edit・
    対象ゾーン）を追加して解消。TF 用トークンとは別物。
 2. **smoke が旧 URL を叩いて 404**
-   `.github/workflows/ci.yml` の `BASE_URL` を `https://md.yskbase.com` に更新（workers.dev は
+   `.github/workflows/ci.yml` の `BASE_URL` を `https://md.example.com` に更新（workers.dev は
    `workers_dev=false` で無効化済み）。
 3. **smoke が CI の IP 起因で 403**
    Cloudflare ゾーンは **GitHub Actions のデータセンター IP を challenge** するため `/health` が 403
@@ -205,7 +205,7 @@ tofu apply
 }
 ```
 
-> プラン注意（実測済み）: yskbase.com の無料プランでは **`period=10`・`mitigation_timeout=10` の
+> プラン注意（実測済み）: example.com の無料プランでは **`period=10`・`mitigation_timeout=10` の
 > 10 秒固定**、Rate limiting rules は **1本のみ**。`period=60` 等は `not entitled to use the period 60,
 > can only use a period among [10]` で 400 になる。2本目以降や長い窓・長いブロックが要るなら Pro 以上。
 > 現行のプラン上限はダッシュボードで確認（プランで変動するため固定値で書かない）。
