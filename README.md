@@ -6,7 +6,7 @@ Markdown 共同編集 + コメントスレッド + AI レビュー。GAS 版 `md
 差は **アダプタ層（DB / 本体ストア / 認証 / 非同期 / CI）だけ**。設計の根拠は別リポの計画書
 （`md-collab-migration-plan.md`）と API 契約（`mdcollab-api-inventory.md`）を参照。
 
-> ✅ **本番稼働中**（`md.yskbase.com`・Cloudflare）。バックエンド API は GAS 版パリティ到達、フロント（React/Vite SPA）一式、
+> ✅ **本番稼働中**（`md.example.com`・Cloudflare）。バックエンド API は GAS 版パリティ到達、フロント（React/Vite SPA）一式、
 > AI レビューの **tool use エージェント化**（参照リポジトリ・コメントスレッド・関連文書を自分で読んで根拠付きレビュー）まで実装済み。
 > 残タスクは [GitHub issues](https://github.com/plzsave/mdcollab/issues) を正とする（移行台帳は [docs/archive/TODO.md](docs/archive/TODO.md) にアーカイブ）。
 

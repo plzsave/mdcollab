@@ -1,6 +1,6 @@
 # mdcollab 残タスク台帳（アーカイブ・完了）
 
-> 📦 **この台帳は役目を終えました（2026-06-13 アーカイブ）。** 脱 GAS 移行のフェーズ 1〜3（バックエンド API パリティ → インフラ/CI → フロント）に加え、AI レビューのエージェント化（A〜D）と search_docs 全文検索まで完了し本番稼働中（`md.yskbase.com`）。
+> 📦 **この台帳は役目を終えました（2026-06-13 アーカイブ）。** 脱 GAS 移行のフェーズ 1〜3（バックエンド API パリティ → インフラ/CI → フロント）に加え、AI レビューのエージェント化（A〜D）と search_docs 全文検索まで完了し本番稼働中（`md.example.com`）。
 > 以降に残った少量のタスクは **GitHub issue へ移行**しました:
 > - AWS デプロイ一式 → [#7](https://github.com/plzsave/mdcollab/issues/7)
 > - 入力サイズ上限 → [#8](https://github.com/plzsave/mdcollab/issues/8)
@@ -166,7 +166,7 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
   ただし Cloudflare の同バインディングは公式に **permissive/結果整合/コロ単位の best-effort**（正確な計数ではない）で、実機バースト(50〜100)では 429 を返さなかった＝**持続的乱用のコストを上げる程度**。
   **厳密な制限が要る場合は独自ドメイン + WAF レート制限ルール（ゾーン単位・正確）へ。workers.dev では WAF レート制限は使えない。**
   → 採用方針: **2（独自ドメイン+WAF）**。手順書 [`docs/custom-domain-waf-ratelimit.md`](../custom-domain-waf-ratelimit.md)。
-  進捗(2026-06-13): 独自ドメイン `md.yskbase.com` へ移行完了（wrangler.toml の `[[routes]] custom_domain` ＋ `workers_dev=false`・BASE_URL/OAuth 切替・ログイン疎通確認済み）。
+  進捗(2026-06-13): 独自ドメイン `md.example.com` へ移行完了（wrangler.toml の `[[routes]] custom_domain` ＋ `workers_dev=false`・BASE_URL/OAuth 切替・ログイン疎通確認済み）。
   WAF レート制限ルールも `tofu apply` 済み（`infra/.../waf.tf`・`cloudflare_ruleset.auth_ratelimit`）。**無料プラン制約**で `period`/`mitigation_timeout` は 10秒固定・1ルールのみのため、実構成は **IP 5req/10s で 10秒 Block**（30req/60s と同平均レート）。`period=60` 等は `not entitled` で 400。長い窓/複数ルールは Pro 以上。
   §6 検証 OK（`/api/auth/login` 60連打→ 20×302 / 40×429・閾値超を正確に Block）。§5 AUTH_LIMITER は **残置で確定**（多層防御・フェイルオープン保険・無作業。WAF 障害時の保険として無害）。→ **独自ドメイン+WAF 一式 完了。**
 - [ ] 入力サイズ上限（本文/コメント等）未設定（Workers が ~100MB で頭打ち・members 限定）
