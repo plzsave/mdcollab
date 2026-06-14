@@ -60,7 +60,7 @@ function AiSettingsView() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">AI 設定</h1>
 
       <section className="space-y-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">

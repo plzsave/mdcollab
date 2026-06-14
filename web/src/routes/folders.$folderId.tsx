@@ -4,6 +4,8 @@ import { useAppState, useFolderDocuments } from "../api/hooks";
 import { StatusBoard } from "../components/StatusBoard";
 import { FolderToolbar } from "../components/FolderToolbar";
 import { statusBadgeClass, statusDotClass } from "../lib/statusColor";
+import { EmptyState } from "../components/ui/EmptyState";
+import { IconFile } from "../components/icons";
 import type { DocumentMeta, Status } from "../api/types";
 
 export const Route = createFileRoute("/folders/$folderId")({ component: FolderView });
@@ -24,7 +26,7 @@ function FolderView() {
     email ? (state?.members.find((m) => m.email === email)?.displayName ?? email) : null;
 
   return (
-    <div className={view === "board" ? "mx-auto max-w-full" : "mx-auto max-w-4xl"}>
+    <div className={view === "board" ? "mx-auto max-w-full" : "mx-auto max-w-5xl"}>
       <FolderToolbar
         folderId={folderId}
         folderName={folder?.name ?? "フォルダ"}
@@ -79,33 +81,38 @@ function FolderView() {
           {docs && docs.length > 0 && state && (
             <StatusSummary docs={docs} statuses={state.statuses} />
           )}
-          <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 dark:divide-slate-800 dark:border-slate-700 dark:bg-slate-900">
-            {(docs ?? []).map((d) => (
-              <li key={d.id}>
-                <Link
-                  to="/documents/$documentId"
-                  params={{ documentId: d.id }}
-                  className="flex items-center justify-between px-4 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-800 dark:hover:bg-slate-800"
-                >
-                  <span className="font-medium text-slate-800 dark:text-slate-100 dark:text-slate-100">{d.title}</span>
-                  <span className="flex items-center gap-2 text-xs text-slate-400">
-                    <span
-                      className={`rounded px-2 py-0.5 ${statusBadgeClass(d.statusId, state?.statuses ?? [])}`}
-                    >
-                      {statusLabel(d.statusId) ?? "未設定"}
+          {docs?.length === 0 ? (
+            <div className="mt-3">
+              <EmptyState
+                icon={<IconFile width={28} height={28} />}
+                title="まだ文書がありません"
+                description="上の「新規文書」または Markdown 取込で文書を追加できます。"
+              />
+            </div>
+          ) : (
+            <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 dark:divide-slate-800 dark:border-slate-700 dark:bg-slate-900">
+              {(docs ?? []).map((d) => (
+                <li key={d.id}>
+                  <Link
+                    to="/documents/$documentId"
+                    params={{ documentId: d.id }}
+                    className="flex items-center justify-between px-4 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-800 dark:hover:bg-slate-800"
+                  >
+                    <span className="font-medium text-slate-800 dark:text-slate-100 dark:text-slate-100">{d.title}</span>
+                    <span className="flex items-center gap-2 text-xs text-slate-400">
+                      <span
+                        className={`rounded px-2 py-0.5 ${statusBadgeClass(d.statusId, state?.statuses ?? [])}`}
+                      >
+                        {statusLabel(d.statusId) ?? "未設定"}
+                      </span>
+                      {d.assignee && <span>@{nameOf(d.assignee)}</span>}
+                      <span>v{d.version}</span>
                     </span>
-                    {d.assignee && <span>@{nameOf(d.assignee)}</span>}
-                    <span>v{d.version}</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-            {docs?.length === 0 && (
-              <li className="px-4 py-6 text-center text-sm text-slate-400">
-                このフォルダにはまだ文書がありません。
-              </li>
-            )}
-          </ul>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       )}
     </div>
