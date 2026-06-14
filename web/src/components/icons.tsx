@@ -90,3 +90,22 @@ export const IconMoon = (p: P) => (
     <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" />
   </Base>
 );
+
+export const IconCheck = (p: P) => (
+  <Base {...p}>
+    <path d="M20 6 9 17l-5-5" />
+  </Base>
+);
+
+export const IconAlert = (p: P) => (
+  <Base {...p}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 8v4M12 16h.01" />
+  </Base>
+);
+
+export const IconX = (p: P) => (
+  <Base {...p}>
+    <path d="M18 6 6 18M6 6l12 12" />
+  </Base>
+);

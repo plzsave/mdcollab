@@ -8,6 +8,8 @@ import { applyHighlights } from "../lib/highlight";
 import { CommentPanel, type DraftAnchor } from "./CommentPanel";
 import { AiReviewPanel } from "./AiReviewPanel";
 import { IconChat, IconMore } from "./icons";
+import { useConfirm } from "./ui/confirm";
+import { useToast } from "./ui/toast";
 import type { DocumentFull } from "../api/types";
 
 type Mode = "edit" | "split" | "preview";
@@ -23,6 +25,8 @@ interface Bubble {
 export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const confirm = useConfirm();
+  const toast = useToast();
   const save = useSaveDocument(doc.id);
   const del = useDeleteDocument(doc.folderId);
   const { data: threads } = useThreads(doc.id);
@@ -149,15 +153,24 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
     URL.revokeObjectURL(url);
   };
 
-  const deleteDoc = () => {
-    if (!confirm(`文書「${doc.title}」を削除しますか？元に戻せません。`)) return;
+  const deleteDoc = async () => {
+    const ok = await confirm({
+      title: "文書を削除しますか？",
+      message: `「${doc.title}」を削除します。元に戻せません。`,
+      confirmLabel: "削除",
+      danger: true,
+    });
+    if (!ok) return;
     del.mutate(doc.id, {
-      onSuccess: () =>
+      onSuccess: () => {
+        toast.success("文書を削除しました");
         navigate(
           doc.folderId
             ? { to: "/folders/$folderId", params: { folderId: doc.folderId } }
             : { to: "/" },
-        ),
+        );
+      },
+      onError: (err) => toast.error(`削除に失敗しました: ${err.message}`),
     });
   };
 
@@ -169,6 +182,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
         onSuccess: (res) => {
           setBaseVersion(res.version);
           setSavedContent(content);
+          toast.success("保存しました");
         },
         onError: (err) => {
           if (err instanceof ApiError && err.status === 409) {
