@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { eq, desc } from "drizzle-orm";
 import type { Deps } from "../env";
 import { requireMember, type Vars } from "../auth/middleware";
+import { LIMITS, lengthError } from "../limits";
 import { folders, documents } from "../db/schema";
 
 // GET    /api/folders                      ≈ getFolders
@@ -47,6 +48,12 @@ export function foldersRoutes(deps: Deps) {
     if (!body.name) {
       return c.json({ error: { code: "BAD_REQUEST", message: "name required" } }, 400);
     }
+    if (body.name.length > LIMITS.folderName) {
+      return c.json(
+        { error: { code: "BAD_REQUEST", message: `name too long (max ${LIMITS.folderName} chars)` } },
+        400,
+      );
+    }
     const rows = await deps.db
       .insert(folders)
       .values({ id: crypto.randomUUID(), name: body.name, createdBy: email })
@@ -59,6 +66,12 @@ export function foldersRoutes(deps: Deps) {
     const body = await c.req.json<{ name?: string }>().catch(() => ({}) as { name?: string });
     if (!body.name) {
       return c.json({ error: { code: "BAD_REQUEST", message: "name required" } }, 400);
+    }
+    if (body.name.length > LIMITS.folderName) {
+      return c.json(
+        { error: { code: "BAD_REQUEST", message: `name too long (max ${LIMITS.folderName} chars)` } },
+        400,
+      );
     }
     const rows = await deps.db
       .update(folders)

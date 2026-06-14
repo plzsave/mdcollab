@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { and, eq, inArray, desc } from "drizzle-orm";
 import type { Deps } from "../env";
 import { requireMember, type Vars } from "../auth/middleware";
+import { LIMITS, lengthError } from "../limits";
 import {
   documents,
   documentVersions,
@@ -66,6 +67,11 @@ export function documentsRoutes(deps: Deps) {
     if (!body.title) {
       return c.json({ error: { code: "BAD_REQUEST", message: "title required" } }, 400);
     }
+    const lenErr = lengthError([
+      [body.title, LIMITS.title, "title"],
+      [body.content, LIMITS.docContent, "content"],
+    ]);
+    if (lenErr) return c.json({ error: { code: "BAD_REQUEST", message: lenErr } }, 400);
     const folderId = body.folderId ?? null;
     if (folderId) {
       const f = await deps.db
@@ -108,6 +114,14 @@ export function documentsRoutes(deps: Deps) {
       const name = f?.name ?? "(no name)";
       if (typeof f?.content !== "string" || !f?.name) {
         results.push({ name, ok: false, error: "name and content required" });
+        continue;
+      }
+      const fileLenErr = lengthError([
+        [f.name, LIMITS.title, "name"],
+        [f.content, LIMITS.docContent, "content"],
+      ]);
+      if (fileLenErr) {
+        results.push({ name, ok: false, error: fileLenErr });
         continue;
       }
       try {
@@ -186,6 +200,8 @@ export function documentsRoutes(deps: Deps) {
     if (typeof body.content !== "string") {
       return c.json({ error: { code: "BAD_REQUEST", message: "content required" } }, 400);
     }
+    const lenErr = lengthError([[body.content, LIMITS.docContent, "content"]]);
+    if (lenErr) return c.json({ error: { code: "BAD_REQUEST", message: lenErr } }, 400);
 
     const rows = await deps.db.select().from(documents).where(eq(documents.id, id)).limit(1);
     const doc = rows[0];

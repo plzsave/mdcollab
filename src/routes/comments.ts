@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { and, eq, inArray } from "drizzle-orm";
 import type { Deps } from "../env";
 import { requireMember, type Vars } from "../auth/middleware";
+import { LIMITS, lengthError } from "../limits";
 import { documents, threads, comments } from "../db/schema";
 import { notify, membersAmong } from "../notify";
 
@@ -57,6 +58,13 @@ export function commentsRoutes(deps: Deps) {
         400,
       );
     }
+    const lenErr = lengthError([
+      [body.anchorText, LIMITS.anchorText, "anchorText"],
+      [body.anchorBefore, LIMITS.anchorContext, "anchorBefore"],
+      [body.anchorAfter, LIMITS.anchorContext, "anchorAfter"],
+      [body.firstComment, LIMITS.commentBody, "firstComment"],
+    ]);
+    if (lenErr) return c.json({ error: { code: "BAD_REQUEST", message: lenErr } }, 400);
     const doc = (
       await deps.db.select().from(documents).where(eq(documents.id, documentId)).limit(1)
     )[0];
@@ -107,6 +115,12 @@ export function commentsRoutes(deps: Deps) {
       .catch(() => ({}) as { content?: string; mentions?: string[] });
     if (!body.content) {
       return c.json({ error: { code: "BAD_REQUEST", message: "content required" } }, 400);
+    }
+    if (body.content.length > LIMITS.commentBody) {
+      return c.json(
+        { error: { code: "BAD_REQUEST", message: `content too long (max ${LIMITS.commentBody} chars)` } },
+        400,
+      );
     }
     const thread = (await deps.db.select().from(threads).where(eq(threads.id, threadId)).limit(1))[0];
     if (!thread) return c.json({ error: { code: "NOT_FOUND", message: "thread not found" } }, 404);
@@ -208,6 +222,12 @@ export function commentsRoutes(deps: Deps) {
       .catch(() => ({}) as { content?: string });
     if (!body.content) {
       return c.json({ error: { code: "BAD_REQUEST", message: "content required" } }, 400);
+    }
+    if (body.content.length > LIMITS.commentBody) {
+      return c.json(
+        { error: { code: "BAD_REQUEST", message: `content too long (max ${LIMITS.commentBody} chars)` } },
+        400,
+      );
     }
     const cm = (await deps.db.select().from(comments).where(eq(comments.id, commentId)).limit(1))[0];
     if (!cm || cm.deleted) {
