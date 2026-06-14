@@ -1,7 +1,7 @@
 # デプロイ実体は repo スクリプトに集約し、CI エンジン(個人=GitHub Actions / 職場=CodePipeline)は
 # 「これを呼ぶだけ」にする＝CI エンジンを差し替え可能に（移行計画 §5.2）。
 
-.PHONY: install typecheck test check dev up down logs migrate seed deploy-cf deploy-aws
+.PHONY: install typecheck test check dev dev-up serve up down logs migrate seed deploy-cf deploy-aws
 
 install:
 	bun install
@@ -18,6 +18,14 @@ dev:
 	bun run dev
 
 # --- ローカル検証 (docker-compose: postgres + S3) ---
+# 下準備をワンショット（compose up --wait + migrate + seed + ログインURL提示）。
+dev-up:
+	./scripts/dev-up.sh
+
+# フルスタック起動（下準備 + backend:8787 + web:5173 を同時、Ctrl-Cで両停止）。
+serve:
+	./scripts/dev-serve.sh
+
 up:
 	docker compose up -d
 

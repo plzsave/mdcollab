@@ -35,8 +35,9 @@ services:
       - ./docker/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
       - seaweeddata:/data
     healthcheck:
-      # master UI(9333) で起動確認（コンテナ内チェックなので未公開でも可）
-      test: ["CMD-SHELL", "wget -qO- http://localhost:9333/cluster/status >/dev/null 2>&1 || exit 1"]
+      # S3 API(:8333) が応答すれば健全。master(9333) は container IP のみで listen し
+      # localhost に bind しないため使えない。未認証の 403 も「起動済み」とみなすので -f は付けない。
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:8333 || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 20
