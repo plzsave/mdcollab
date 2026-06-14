@@ -102,7 +102,7 @@ export function AiReviewPanel({
   };
 
   return (
-    <aside className="flex h-full w-96 shrink-0 flex-col rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+    <aside className="fixed inset-0 z-40 flex h-full w-full flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 md:static md:z-auto md:w-96 md:shrink-0 md:rounded-lg">
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-4 py-3">
         <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">AI レビュー</h2>
         <button onClick={onClose} className="text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200">
