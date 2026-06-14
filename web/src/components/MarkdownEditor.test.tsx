@@ -13,7 +13,10 @@ vi.mock("../api/hooks", () => ({
   useDeleteDocument: () => ({ mutate: delMutate, isPending: false }),
   useThreads: () => ({ data: [] }),
 }));
-vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => vi.fn(),
+  useBlocker: () => ({ status: "idle", proceed: vi.fn(), reset: vi.fn() }),
+}));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
 // Dialog/Toast プロバイダ非依存にするためフックをモック（本コンポーネントの検証対象外）。
 vi.mock("./ui/confirm", () => ({ useConfirm: () => vi.fn(async () => true) }));
@@ -43,6 +46,7 @@ function editorTextarea(): HTMLTextAreaElement {
 beforeEach(() => {
   saveMutate.mockReset();
   delMutate.mockReset();
+  localStorage.clear();
 });
 
 describe("MarkdownEditor", () => {
@@ -57,6 +61,26 @@ describe("MarkdownEditor", () => {
     fireEvent.change(editorTextarea(), { target: { value: "# 編集後" } });
     expect(screen.getByText("● 未保存")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "保存" })).toBeEnabled();
+  });
+
+  it("doc 本文と異なる下書きがあれば復元バナーを出し、復元で本文へ反映する", () => {
+    localStorage.setItem(
+      "mdcollab:draft:doc1",
+      JSON.stringify({ content: "# 下書き", baseVersion: 3, savedAt: 1 }),
+    );
+    render(<MarkdownEditor doc={makeDoc()} />);
+    expect(screen.getByText("保存されていない下書きが見つかりました。復元しますか？")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "復元" }));
+    expect(editorTextarea().value).toBe("# 下書き");
+  });
+
+  it("下書きが doc 本文と同一なら復元バナーを出さない", () => {
+    localStorage.setItem(
+      "mdcollab:draft:doc1",
+      JSON.stringify({ content: "# 元の本文", baseVersion: 3, savedAt: 1 }),
+    );
+    render(<MarkdownEditor doc={makeDoc()} />);
+    expect(screen.queryByText(/下書きが見つかりました/)).toBeNull();
   });
 
   it("保存時は現在の baseVersion で mutate を呼ぶ", () => {
