@@ -8,16 +8,8 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <script>
-      // 初回描画前にダークを適用してチラつきを防ぐ（lib/theme.ts と同じキー/規則）。
-      (function () {
-        try {
-          var t = localStorage.getItem("mdcollab-theme");
-          var dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
-          if (dark) document.documentElement.classList.add("dark");
-        } catch (e) {}
-      })();
-    </script>
+    <!-- 初回描画前にダーク適用（チラつき防止）。CSP 対応で外部化し、paint 前に同期実行。 -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>
