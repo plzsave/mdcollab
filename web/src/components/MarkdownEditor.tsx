@@ -7,7 +7,7 @@ import { renderMarkdown } from "../lib/markdown";
 import { applyHighlights } from "../lib/highlight";
 import { CommentPanel, type DraftAnchor } from "./CommentPanel";
 import { AiReviewPanel } from "./AiReviewPanel";
-import { IconChat } from "./icons";
+import { IconChat, IconMore } from "./icons";
 import type { DocumentFull } from "../api/types";
 
 type Mode = "edit" | "split" | "preview";
@@ -30,8 +30,14 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
   const [content, setContent] = useState(doc.content);
   const [savedContent, setSavedContent] = useState(doc.content);
   const [baseVersion, setBaseVersion] = useState(doc.version);
-  const [mode, setMode] = useState<Mode>("split");
+  // 初期モード: md+ は分割、モバイルは編集（分割は狭い画面で潰れるため）。
+  const [mode, setMode] = useState<Mode>(() =>
+    typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches
+      ? "split"
+      : "edit",
+  );
   const [conflict, setConflict] = useState<number | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const [showComments, setShowComments] = useState(false);
   const [showReview, setShowReview] = useState(false);
@@ -187,19 +193,21 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
   return (
     <div className="flex h-full gap-4">
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{doc.title}</h1>
-            <span className="text-xs text-slate-400">v{baseVersion}</span>
-            {dirty && <span className="text-xs text-amber-600">● 未保存</span>}
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <h1 className="truncate text-xl font-bold text-slate-800 dark:text-slate-100">
+              {doc.title}
+            </h1>
+            <span className="shrink-0 text-xs text-slate-400">v{baseVersion}</span>
+            {dirty && <span className="shrink-0 text-xs text-amber-600">● 未保存</span>}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex overflow-hidden rounded-md border border-slate-200 dark:border-slate-700 text-xs">
               {(["edit", "split", "preview"] as Mode[]).map((m) => (
                 <button
                   key={m}
                   onClick={() => setMode(m)}
-                  className={`px-3 py-1.5 ${
+                  className={`px-3 py-1.5 ${m === "split" ? "hidden md:block" : ""} ${
                     mode === m ? "bg-slate-800 dark:bg-slate-700 text-white" : "bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
@@ -234,20 +242,65 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
             >
               {save.isPending ? "保存中…" : "保存"}
             </button>
+            {/* デスクトップ: 副次アクションを横並びで表示 */}
             <button
               onClick={exportMd}
               title="Markdown をダウンロード"
-              className="rounded-md border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-500 hover:border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200"
+              className="hidden rounded-md border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-500 hover:border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 dark:text-slate-200 md:block"
             >
               エクスポート
             </button>
             <button
               onClick={deleteDoc}
               disabled={del.isPending}
-              className="rounded-md border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+              className="hidden rounded-md border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 md:block"
             >
               削除
             </button>
+
+            {/* モバイル: 副次アクションをオーバーフローメニューへ */}
+            <div className="relative md:hidden">
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-label="その他の操作"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                className="rounded-md border border-slate-200 dark:border-slate-700 p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+              >
+                <IconMore />
+              </button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                  <div
+                    role="menu"
+                    className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg"
+                  >
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        exportMd();
+                      }}
+                      className="block w-full px-4 py-2 text-left text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    >
+                      エクスポート
+                    </button>
+                    <button
+                      role="menuitem"
+                      disabled={del.isPending}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        deleteDoc();
+                      }}
+                      className="block w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-40"
+                    >
+                      削除
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -283,7 +336,11 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
           </p>
         )}
 
-        <div className="mt-3 grid min-h-0 flex-1 gap-4" style={gridCols(mode)}>
+        <div
+          className={`mt-3 grid min-h-0 flex-1 gap-4 ${
+            mode === "split" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+          }`}
+        >
           {mode !== "preview" && (
             <textarea
               value={content}
@@ -334,8 +391,4 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
       )}
     </div>
   );
-}
-
-function gridCols(mode: Mode): React.CSSProperties {
-  return { gridTemplateColumns: mode === "split" ? "1fr 1fr" : "1fr" };
 }
