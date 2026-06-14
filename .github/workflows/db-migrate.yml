@@ -1,0 +1,53 @@
+name: db-migrate
+
+# 本番 DB マイグレーションを CI の手動承認ジョブで実行する（#23）。
+# 目的: ローカルから本番 Neon への直 migrate を廃止し、認証情報の分散と
+#       監査ログ欠如・属人的な順序運用を解消する。
+#
+# 前提（GitHub 側の設定。ワークフローファイルだけでは完結しない）:
+#   Settings → Environments → "production" を作成し、
+#     - Required reviewers を設定（= 実行前に承認ゲートがかかる）
+#     - Secret: DATABASE_URL（本番 Neon の接続文字列）を登録
+#   ※ 本番接続情報はこの Environment Secret にのみ置き、各自のローカルには置かない。
+#
+# 使い方: Actions → db-migrate → "Run workflow" で confirm に "migrate" と入力 → 承認 → 実行。
+# 実行ログ（適用済み/対象マイグレーション一覧 + drizzle-kit の出力）が監査証跡になる。
+#
+# deploy との順序: スキーマ追加（後方互換）は migrate → deploy。
+#   破壊的変更（列削除/リネーム等）は「先に新コードを deploy → migrate」など、
+#   各 PR の説明に従って手動で順序を判断する（deploy-cf は migrate を自動実行しない）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: '本番 DB に migrate を適用します。確認のため "migrate" と入力してください'
+        required: true
+        default: ""
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    # Required reviewers による承認ゲート + DATABASE_URL の取得元。
+    environment: production
+    steps:
+      - name: Guard confirmation input
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "migrate" ]; then
+            echo "::error::confirm に 'migrate' が入力されていないため中止します。"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+
+      - name: List migration files (audit)
+        run: |
+          echo "適用候補のマイグレーション（drizzle/*.sql）:"
+          ls -1 drizzle/*.sql
+
+      - name: Apply migrations
+        run: bun run db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

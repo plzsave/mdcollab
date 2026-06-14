@@ -4,7 +4,8 @@ name: ci
 #   check : 型チェック + テスト + web ビルド（PR と main の両方で実行＝品質ゲート）
 #   deploy: main への push のみ。web をビルドして Worker(+[assets]) をデプロイ
 # デプロイ実体は scripts/deploy-cf.sh（ローカルでも同じものを使える）。
-# 注: Terraform(R2/Hyperdrive) と DB migrate は CI では回さない（手動運用）。
+# 注: Terraform(R2/Hyperdrive) はこの CI では回さない（手動運用）。
+#     DB migrate は別ワークフロー db-migrate.yml（手動 dispatch + production 環境の承認ゲート）で実行する（#23）。
 
 on:
   push:
