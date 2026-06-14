@@ -7,6 +7,8 @@ import {
   useImportDocuments,
   useRenameFolder,
 } from "../api/hooks";
+import { useConfirm } from "./ui/confirm";
+import { useToast } from "./ui/toast";
 
 // フォルダ操作（名前変更・削除）と文書作成・Markdown 取込をまとめたツールバー。
 export function FolderToolbar({
@@ -19,6 +21,8 @@ export function FolderToolbar({
   docCount: number;
 }) {
   const navigate = useNavigate();
+  const confirm = useConfirm();
+  const toast = useToast();
   const rename = useRenameFolder();
   const delFolder = useDeleteFolder();
   const createDoc = useCreateDocument(folderId);
@@ -110,10 +114,22 @@ export function FolderToolbar({
               名前変更
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (docCount > 0) return;
-                if (confirm(`フォルダ「${folderName}」を削除しますか？`))
-                  delFolder.mutate(folderId, { onSuccess: () => navigate({ to: "/" }) });
+                const ok = await confirm({
+                  title: "フォルダを削除しますか？",
+                  message: `「${folderName}」を削除します。`,
+                  confirmLabel: "削除",
+                  danger: true,
+                });
+                if (!ok) return;
+                delFolder.mutate(folderId, {
+                  onSuccess: () => {
+                    toast.success("フォルダを削除しました");
+                    navigate({ to: "/" });
+                  },
+                  onError: (err) => toast.error(`削除に失敗しました: ${err.message}`),
+                });
               }}
               disabled={docCount > 0}
               title={docCount > 0 ? "文書が残っているフォルダは削除できません" : ""}

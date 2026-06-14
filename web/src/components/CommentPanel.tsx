@@ -8,6 +8,8 @@ import {
   useSetThreadStatus,
   useThreads,
 } from "../api/hooks";
+import { useConfirm } from "./ui/confirm";
+import { useToast } from "./ui/toast";
 import type { Comment, Member, Thread } from "../api/types";
 
 export interface DraftAnchor {
@@ -322,6 +324,8 @@ function CommentItem({
 }) {
   const editMut = useEditComment(documentId);
   const delMut = useDeleteComment(documentId);
+  const confirm = useConfirm();
+  const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.content);
 
@@ -375,8 +379,16 @@ function CommentItem({
                 編集
               </button>
               <button
-                onClick={() => {
-                  if (confirm("このコメントを削除しますか？")) delMut.mutate(comment.id);
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: "コメントを削除しますか？",
+                    confirmLabel: "削除",
+                    danger: true,
+                  });
+                  if (!ok) return;
+                  delMut.mutate(comment.id, {
+                    onError: (err) => toast.error(`削除に失敗しました: ${err.message}`),
+                  });
                 }}
                 className="hover:text-red-600"
               >
