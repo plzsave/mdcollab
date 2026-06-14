@@ -122,10 +122,7 @@ bun run deploy
 - ✅ インフラ/CI: Cloudflare 本番稼働（独自ドメイン+WAF レート制限）・OpenTofu で R2/Hyperdrive 管理・
   GitHub Actions 自動デプロイ。
 - ✅ テスト: pglite + メモリストア + fake LLM の結合テスト **112 本**（docker 不要・`bun run test`）。
-- ⬜ 残り（issue 化済み）: [AWS デプロイ一式 #7](https://github.com/plzsave/mdcollab/issues/7)（後回し）/
-  [入力サイズ上限 #8](https://github.com/plzsave/mdcollab/issues/8) /
-  [CSP #9](https://github.com/plzsave/mdcollab/issues/9) /
-  [esbuild advisory #10](https://github.com/plzsave/mdcollab/issues/10)。
+- ⬜ 未実装・残タスクは **[GitHub issues](https://github.com/plzsave/mdcollab/issues)** が正（番号の手書き列挙はしない）。
 
 ### テスト方針
 `test/helpers/harness.ts` が **pglite（プロセス内 Postgres）に本番マイグレーションを適用** + **メモリ実装の
