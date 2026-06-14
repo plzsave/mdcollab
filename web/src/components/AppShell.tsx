@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react";
 import { useCreateFolder, useLogout } from "../api/hooks";
 import { ApiError } from "../api/client";
 import { ThemeToggle } from "./ThemeToggle";
-import { IconBell, IconGear, IconPlus, IconUsers } from "./icons";
+import { IconBell, IconGear, IconMenu, IconPlus, IconUsers } from "./icons";
 import type { AppState } from "../api/types";
 
 // ログイン済みメンバーの共通レイアウト（左サイドバー: フォルダ一覧 + 上部バー）。
@@ -13,12 +13,30 @@ export function AppShell({ state, children }: { state: AppState; children: React
   // ユーザー表示は原則「表示名」に統一（メールはツールチップ）。
   const me = state.members.find((m) => m.email === state.currentUser.email);
   const myName = me?.displayName ?? state.currentUser.name ?? state.currentUser.email;
+  // モバイル: サイドバーをオフキャンバス・ドロワー化（md+ は常時表示）。
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const closeDrawer = () => setDrawerOpen(false);
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100">
-      <aside className="flex w-64 flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-slate-900/40 md:hidden"
+          onClick={closeDrawer}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 transition-transform md:static md:z-auto md:translate-x-0 ${
+          drawerOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
         <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-4">
-          <Link to="/" className="text-lg font-bold text-slate-800 dark:text-slate-100">
+          <Link
+            to="/"
+            onClick={closeDrawer}
+            className="text-lg font-bold text-slate-800 dark:text-slate-100"
+          >
             mdcollab
           </Link>
         </div>
@@ -36,6 +54,7 @@ export function AppShell({ state, children }: { state: AppState; children: React
                 <Link
                   to="/folders/$folderId"
                   params={{ folderId: f.id }}
+                  onClick={closeDrawer}
                   className="block rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900 dark:[&.active]:bg-slate-800 dark:[&.active]:text-slate-100"
                 >
                   {f.name}
@@ -49,6 +68,7 @@ export function AppShell({ state, children }: { state: AppState; children: React
         <div className="space-y-0.5 border-t border-slate-200 dark:border-slate-700 px-2 py-2">
           <Link
             to="/notifications"
+            onClick={closeDrawer}
             className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900 dark:[&.active]:bg-slate-800 dark:[&.active]:text-slate-100"
           >
             <span className="flex items-center gap-2">
@@ -62,12 +82,14 @@ export function AppShell({ state, children }: { state: AppState; children: React
           </Link>
           <Link
             to="/members"
+            onClick={closeDrawer}
             className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900 dark:[&.active]:bg-slate-800 dark:[&.active]:text-slate-100"
           >
             <IconUsers className="text-slate-400" /> メンバー
           </Link>
           <Link
             to="/settings/ai"
+            onClick={closeDrawer}
             className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700 [&.active]:bg-slate-100 [&.active]:font-medium [&.active]:text-slate-900 dark:[&.active]:bg-slate-800 dark:[&.active]:text-slate-100"
           >
             <IconGear className="text-slate-400" /> AI 設定
@@ -76,8 +98,15 @@ export function AppShell({ state, children }: { state: AppState; children: React
       </aside>
 
       <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-6 py-3">
-          <div className="text-sm text-slate-400">
+        <header className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 md:px-6">
+          <div className="flex items-center gap-2 text-sm text-slate-400">
+            <button
+              onClick={() => setDrawerOpen(true)}
+              aria-label="メニューを開く"
+              className="-ml-1 rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 md:hidden"
+            >
+              <IconMenu />
+            </button>
             {unread > 0 && (
               <Link
                 to="/notifications"

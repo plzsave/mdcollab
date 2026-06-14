@@ -50,7 +50,7 @@ export function CommentPanel({
     .sort((a, b) => (a.status === b.status ? 0 : a.status === "open" ? -1 : 1));
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 lg:w-96">
+    <aside className="fixed inset-0 z-40 flex h-full w-full flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 md:static md:z-auto md:w-80 md:shrink-0 md:rounded-lg lg:w-96">
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-4 py-3">
         <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           コメント
