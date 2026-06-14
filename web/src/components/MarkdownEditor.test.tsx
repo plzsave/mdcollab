@@ -15,6 +15,9 @@ vi.mock("../api/hooks", () => ({
 }));
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
+// Dialog/Toast プロバイダ非依存にするためフックをモック（本コンポーネントの検証対象外）。
+vi.mock("./ui/confirm", () => ({ useConfirm: () => vi.fn(async () => true) }));
+vi.mock("./ui/toast", () => ({ useToast: () => ({ success: vi.fn(), error: vi.fn() }) }));
 
 import { MarkdownEditor } from "./MarkdownEditor";
 

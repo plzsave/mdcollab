@@ -8,6 +8,8 @@ import {
   useRemoveMember,
   useUpdateMember,
 } from "../api/hooks";
+import { useConfirm } from "../components/ui/confirm";
+import { useToast } from "../components/ui/toast";
 import type { Member } from "../api/types";
 
 export const Route = createFileRoute("/members")({ component: MembersView });
@@ -133,6 +135,8 @@ function MemberRow({
 }) {
   const update = useUpdateMember();
   const remove = useRemoveMember();
+  const confirm = useConfirm();
+  const toast = useToast();
   const err = update.error ?? remove.error;
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(member.displayName);
@@ -220,8 +224,18 @@ function MemberRow({
 
         {isOwner && (
           <button
-            onClick={() => {
-              if (confirm(`${member.displayName} を削除しますか？`)) remove.mutate(member.email);
+            onClick={async () => {
+              const ok = await confirm({
+                title: "メンバーを削除しますか？",
+                message: `${member.displayName} を削除します。`,
+                confirmLabel: "削除",
+                danger: true,
+              });
+              if (!ok) return;
+              remove.mutate(member.email, {
+                onSuccess: () => toast.success("メンバーを削除しました"),
+                onError: (err) => toast.error(`削除に失敗しました: ${err.message}`),
+              });
             }}
             disabled={remove.isPending}
             className="text-xs text-slate-400 hover:text-red-600 disabled:opacity-40"
