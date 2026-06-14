@@ -120,7 +120,7 @@ bun run deploy
   `get_doc_threads` / `search_docs`(本文全文検索)。Anthropic/OpenAI 両対応・プロンプトキャッシュ・
   読了ファイルの透明性表示・暴走ガード。設計は **[docs/ai-review-agent.md](docs/ai-review-agent.md)**。
 - ✅ インフラ/CI: Cloudflare 本番稼働（独自ドメイン+WAF レート制限）・OpenTofu で R2/Hyperdrive 管理・
-  GitHub Actions 自動デプロイ。
+  GitHub Actions 自動デプロイ。**本番 DB migrate は Actions の承認付きジョブ `db-migrate`**（ローカル直 migrate は非推奨・#23）。
 - ✅ テスト: pglite + メモリストア + fake LLM の結合テスト **112 本**（docker 不要・`bun run test`）。
 - ⬜ 未実装・残タスクは **[GitHub issues](https://github.com/plzsave/mdcollab/issues)** が正（番号の手書き列挙はしない）。
 

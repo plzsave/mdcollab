@@ -83,12 +83,24 @@ Workers サブドメインに書き換える（例 `https://mdcollab-api.<you>.w
 
 ## 4. スキーマを Neon に適用
 
-Neon は公開エンドポイントなので、ローカルから直接マイグレーションできる:
+**本番 migrate は CI の承認付きジョブで実行する**（#23）。ローカルからの本番直 migrate は非推奨
+（認証情報の分散・監査ログ欠如・属人的な順序運用を避けるため）。
 
-```bash
-DATABASE_URL="postgres://<user>:<pass>@<neon-host>/<db>?sslmode=require" \
-  bun run db:migrate
-```
+事前設定（一度だけ）:
+
+- GitHub → Settings → Environments → `production` を作成
+  - **Required reviewers** を設定（実行前の承認ゲート）
+  - Secret `DATABASE_URL` に本番 Neon 接続文字列（`postgres://…?sslmode=require`）を登録
+
+実行:
+
+1. GitHub → Actions → **db-migrate** → **Run workflow**
+2. `confirm` に `migrate` と入力して実行
+3. レビュアーが承認するとジョブが走り、`drizzle-kit migrate` が適用される（ログ＝監査証跡）
+
+> 緊急時のローカル実行は技術的には可能だが、原則ジョブを使う。
+> 初回ブートストラップなど環境がまだ無い場合のみ、一時的にローカルから
+> `DATABASE_URL=… bun run db:migrate` を許容する。
 
 ---
 
