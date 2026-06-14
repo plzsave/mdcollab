@@ -2,7 +2,7 @@
 
 **前提**: [`ai-review-agent.md`](ai-review-agent.md) の Phase A〜D（tool use ループ・4ツール・Anthropic/OpenAI パリティ・web 進捗チップ）＋ search_docs 全文検索は実装・本番稼働済み。本書はその次の拡張を定める。
 
-> ステータス: **設計中（未実装）**。レビュー後にフェーズ順で着手。
+> ステータス: **設計中（未実装）**。進捗・残タスクの追跡は [#14](https://github.com/plzsave/mdcollab/issues/14) が正。本書は設計の詳細を定める（タスクの完了状況は issue 側で管理）。
 > 対象: `src/llm/` / `src/ai/` / `src/routes/reviews.ts` / `src/github/` / `web/` / `src/db/schema.ts` / `test/`。
 
 ## やること / やらないこと
