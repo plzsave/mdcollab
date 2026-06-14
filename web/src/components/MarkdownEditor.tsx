@@ -264,10 +264,11 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
             >
               エクスポート
             </button>
+            {/* 破壊的アクションは赤系で明示し、保存/エクスポートと視覚的に分離（誤クリック防止・#20） */}
             <button
               onClick={deleteDoc}
               disabled={del.isPending}
-              className="hidden rounded-md border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 md:block"
+              className="ml-1 hidden rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-40 md:block dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-900/30"
             >
               削除
             </button>
