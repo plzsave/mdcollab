@@ -162,7 +162,7 @@ export interface Harness {
   req(path: string, init?: RequestInit & { as?: string }): Promise<Response>;
 }
 
-export async function makeHarness(): Promise<Harness> {
+export async function makeHarness(configOverride: Partial<AppConfig> = {}): Promise<Harness> {
   const db = await makeTestDb();
   const store = makeMemoryStore();
   const llm = makeFakeLlm();
@@ -172,6 +172,7 @@ export async function makeHarness(): Promise<Harness> {
     sessionSecret: TEST_SECRET,
     encryptionKey: "test-encryption-key",
     google: { clientId: "x", clientSecret: "x" },
+    ...configOverride,
   };
   const deps: Deps = { db, store, llm, github, config };
   const app = createApp(deps);

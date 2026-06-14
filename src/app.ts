@@ -1,5 +1,7 @@
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import type { Deps } from "./env";
+import { LIMITS } from "./limits";
 import { sessionMiddleware, type Vars } from "./auth/middleware";
 import { authRoutes } from "./routes/auth";
 import { stateRoutes } from "./routes/state";
@@ -25,6 +27,17 @@ export function createApp(deps: Deps) {
   });
 
   app.get("/health", (c) => c.json({ ok: true }));
+
+  // リクエストボディ総量の上限（#8）。超過は 413（巨大入力の粗い DoS バックストップ）。
+  // 個別フィールドの上限は各ハンドラで 400 を返す。
+  app.use(
+    "*",
+    bodyLimit({
+      maxSize: LIMITS.bodyBytes,
+      onError: (c) =>
+        c.json({ error: { code: "PAYLOAD_TOO_LARGE", message: "request body too large" } }, 413),
+    }),
+  );
 
   app.use("*", sessionMiddleware(deps));
 
