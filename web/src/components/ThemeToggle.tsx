@@ -8,7 +8,8 @@ const ICON: Record<Theme, ReactNode> = {
   light: <IconSun />,
   dark: <IconMoon />,
 };
-const LABEL: Record<Theme, string> = { system: "OS設定", light: "ライト", dark: "ダーク" };
+// 「OS設定」は設定画面と紛らわしいため、テーマモードと分かる表記に（#21）。
+const LABEL: Record<Theme, string> = { system: "自動", light: "ライト", dark: "ダーク" };
 
 // テーマ切替（system → light → dark を巡回）。system は OS 設定に追従。
 export function ThemeToggle() {
@@ -32,10 +33,12 @@ export function ThemeToggle() {
   return (
     <button
       onClick={cycle}
+      aria-label={`テーマ切替（現在: ${LABEL[theme]}）`}
       title={`テーマ: ${LABEL[theme]}（クリックで切替）`}
       className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700 dark:hover:text-slate-200 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
     >
-      {ICON[theme]} {LABEL[theme]}
+      {ICON[theme]}
+      <span className="text-slate-400 dark:text-slate-500">テーマ:</span> {LABEL[theme]}
     </button>
   );
 }

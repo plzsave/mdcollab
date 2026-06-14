@@ -20,7 +20,7 @@ function MembersView() {
   const isOwner = state?.currentUser.role === "owner";
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-5xl">
       <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">メンバー</h1>
       {!isOwner && (
         <p className="mt-1 text-xs text-slate-400">

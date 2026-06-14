@@ -5,6 +5,8 @@ import {
   useNotifications,
 } from "../api/hooks";
 import type { Notification } from "../api/types";
+import { EmptyState } from "../components/ui/EmptyState";
+import { IconBell } from "../components/icons";
 
 export const Route = createFileRoute("/notifications")({ component: NotificationsView });
 
@@ -21,7 +23,7 @@ function NotificationsView() {
   const unread = (notes ?? []).filter((n) => !n.isRead).length;
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-5xl">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
           通知{unread > 0 && <span className="ml-2 text-sm font-normal text-amber-600">未読 {unread}</span>}
@@ -42,16 +44,21 @@ function NotificationsView() {
         </p>
       )}
 
-      <ul className="mt-6 space-y-2">
-        {(notes ?? []).map((n) => (
-          <NotificationItem key={n.id} note={n} />
-        ))}
-        {notes?.length === 0 && (
-          <li className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-6 text-center text-sm text-slate-400">
-            通知はありません。
-          </li>
-        )}
-      </ul>
+      {notes?.length === 0 ? (
+        <div className="mt-6">
+          <EmptyState
+            icon={<IconBell width={28} height={28} />}
+            title="通知はありません"
+            description="メンション・返信・解決があるとここに表示されます。"
+          />
+        </div>
+      ) : (
+        <ul className="mt-6 space-y-2">
+          {(notes ?? []).map((n) => (
+            <NotificationItem key={n.id} note={n} />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
