@@ -16,3 +16,6 @@ cookie.txt
 *.tfstate.*
 terraform.tfvars
 crash.log
+
+# test coverage 出力
+coverage/

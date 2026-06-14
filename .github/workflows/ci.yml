@@ -21,6 +21,8 @@ jobs:
       - run: make check # typecheck + test（バックエンド）
       - run: bun install --frozen-lockfile
         working-directory: web
+      - run: bun run test # web のユニット/コンポーネントテスト（vitest）
+        working-directory: web
       - run: bun run build:web # web の型チェック(tsc) + ビルド
 
   deploy-cf:
