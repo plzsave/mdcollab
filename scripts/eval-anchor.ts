@@ -13,7 +13,7 @@
 //     高ければ次段で『レンダリング後テキストへの対応づけ』を詰める。低ければ ① は要再設計。
 import { readdirSync, readFileSync } from "node:fs";
 import { createLlmClient } from "../src/llm/providers";
-import { anchorQuote, parseFindings } from "../src/ai/findings";
+import { anchorQuote, isHighlightable, parseFindings } from "../src/ai/findings";
 
 interface Doc {
   name: string;
@@ -47,7 +47,9 @@ function resolveApiKey(provider: string): string {
 const SYSTEM =
   "あなたはテクニカルライティングのレビュアーです。指摘を JSON 配列だけで返します（前後の説明やコードフェンスは付けない）。" +
   '各要素は {"quote": 本文からの逐語引用(5〜15語程度), "comment": 指摘, "severity": "info"|"warn"}。' +
-  "quote は本文に現れる文字列をそのまま正確にコピーすること（言い換え・要約は禁止）。";
+  "quote は本文に現れる文字列をそのまま正確にコピーすること（言い換え・要約は禁止）。" +
+  "さらに quote は本文の【地の文（散文）】から選ぶこと。コードや表のセル・見出し・` で囲った部分・**強調**を" +
+  "またぐ引用は避け、装飾を含まない連続した文の一部を選ぶ（指摘対象がコード/表なら、その近くの説明文を quote にする）。";
 
 async function main() {
   const provider = process.env.EVAL_PROVIDER ?? "anthropic";
@@ -62,6 +64,7 @@ async function main() {
   let normalized = 0;
   let failed = 0;
   let ambiguous = 0;
+  let highlightable = 0; // 描画後の単一テキストノードに収まり、現状の web ハイライトで光る件数
 
   for (const d of DOCS) {
     let raw = "";
@@ -78,14 +81,17 @@ async function main() {
     for (const f of findings) {
       total++;
       const a = anchorQuote(d.body, f.quote);
+      const hl = isHighlightable(d.body, f.quote); // 描画後に光るか
+      if (hl) highlightable++;
+      const hlMark = hl ? "💡光る" : "・光らない";
       if (!a) {
         failed++;
-        console.log(`  ✗ 失敗  quote=「${f.quote.slice(0, 40)}」`);
+        console.log(`  ✗ 失敗  ${hlMark}  quote=「${f.quote.slice(0, 40)}」`);
       } else {
         if (a.kind === "exact") exact++;
         else normalized++;
         if (a.ambiguous) ambiguous++;
-        console.log(`  ✓ ${a.kind}${a.ambiguous ? "・曖昧" : ""}  anchor=「${a.anchorText.slice(0, 40)}」`);
+        console.log(`  ✓ ${a.kind}${a.ambiguous ? "・曖昧" : ""}  ${hlMark}  anchor=「${a.anchorText.slice(0, 40)}」`);
       }
     }
     console.log("");
@@ -95,12 +101,12 @@ async function main() {
   const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
   console.log("──────── 集計 ────────");
   console.log(`指摘総数: ${total}`);
-  console.log(`アンカー成功: ${hit} (${pct(hit)}%)  ［exact ${exact} / normalized ${normalized}］`);
-  console.log(`失敗: ${failed} (${pct(failed)}%)`);
+  console.log(`生本文アンカー成功: ${hit} (${pct(hit)}%)  ［exact ${exact} / normalized ${normalized} / 失敗 ${failed}］`);
+  console.log(`★描画後ハイライト可能: ${highlightable} (${pct(highlightable)}%)  ← ① で実際に光る率（本番の数字）`);
   console.log(`曖昧(複数箇所に一致): ${ambiguous}`);
   console.log(
-    "\n判断目安: 成功率が高く失敗・曖昧が少なければ ① は有望。" +
-      "失敗が多ければ『逐語引用の指示強化／レンダリング後テキストへの対応づけ／位置特定できない指摘はドキュメント全体スレッドに退避』を検討。",
+    "\n判断目安: ★描画後ハイライト可能率が実用上の指標。" +
+      "高ければ ① は有望。低ければ『散文引用の誘導強化／位置特定できない指摘は文書全体スレッドに退避』を検討。",
   );
 }
 
