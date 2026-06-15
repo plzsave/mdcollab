@@ -89,6 +89,31 @@ describe("OpenAI converse パリティ", () => {
     expect(deltas).toEqual(["指摘", "です"]);
   });
 
+  it("最終 usage チャンクを正規化する（include_usage 要求・cached は input から差し引く）", async () => {
+    nextResponse = () =>
+      sse(
+        { choices: [{ delta: { content: "ok" } }] },
+        { choices: [{ delta: {}, finish_reason: "stop" }] },
+        // OpenAI は usage チャンクを choices 空で最後に送る
+        {
+          choices: [],
+          usage: { prompt_tokens: 1000, completion_tokens: 200, prompt_tokens_details: { cached_tokens: 800 } },
+        },
+      );
+
+    const r = await createLlmClient().converse(input({}));
+
+    // stream_options.include_usage を要求している
+    expect(lastBody.stream_options).toEqual({ include_usage: true });
+    // prompt_tokens(1000) は cached(800) を含むので、新規入力は 200・キャッシュ読込 800 に分解
+    expect(r.usage).toEqual({
+      inputTokens: 200,
+      outputTokens: 200,
+      cacheReadInputTokens: 800,
+      cacheCreationInputTokens: 0,
+    });
+  });
+
   it("正準 IR を OpenAI ワイヤ形式へ翻訳する（tool_use→tool_calls、tool_result→role:tool）", async () => {
     nextResponse = () => sse({ choices: [{ delta: { content: "ok" }, finish_reason: "stop" }] });
 

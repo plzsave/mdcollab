@@ -22,6 +22,13 @@
       "when": 1781354562127,
       "tag": "0002_bright_frank_castle",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781493420566,
+      "tag": "0003_ambiguous_stryfe",
+      "breakpoints": true
     }
   ]
 }

@@ -104,6 +104,14 @@ export const reviews = pgTable("reviews", {
   content: text("content").notNull(),
   createdBy: text("created_by").notNull(),
   createdAt: createdAt(),
+  // コスト可観測性（Phase E）。usage は旧レビューや usage 非返却プロバイダでは null。
+  // inputTokens は「キャッシュ未ヒットの新規入力」。総入力 = input + cacheRead + cacheWrite。
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
+  cacheReadTokens: integer("cache_read_tokens"),
+  cacheWriteTokens: integer("cache_write_tokens"),
+  toolsUsed: text("tools_used"), // 使用ツールの JSON 文字列（string[]）
+  truncated: boolean("truncated").notNull().default(false),
 });
 
 export const revisions = pgTable(

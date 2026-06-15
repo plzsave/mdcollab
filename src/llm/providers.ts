@@ -1,4 +1,4 @@
-import type { ConverseInput, LlmClient, LlmInput, LlmTurnResult, ToolDef } from "./types";
+import type { ConverseInput, LlmClient, LlmInput, LlmTurnResult, LlmUsage, ToolDef } from "./types";
 
 // 実 HTTP の LlmClient（anthropic / openai）。Web 標準 fetch のみ＝Workers/Node/Lambda 共通。
 // モデルはユーザー設定値をそのまま使う（ここでハードコードしない）。body は最小限にして
@@ -235,9 +235,27 @@ async function anthropicConverse(base: string, input: ConverseInput): Promise<Ll
   type Block = { type: string; text?: string; id?: string; name?: string; partialJson?: string };
   const blocks: Block[] = [];
   let text = "";
+  // usage は message_start（input/cache 系）と message_delta（最終 output）に分かれて届く。
+  const usage: LlmUsage = {
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheReadInputTokens: 0,
+    cacheCreationInputTokens: 0,
+  };
 
   for await (const ev of parseSseEvents(res)) {
-    if (ev.type === "content_block_start") {
+    if (ev.type === "message_start") {
+      const u = (ev.message as { usage?: Record<string, number> } | undefined)?.usage;
+      if (u) {
+        usage.inputTokens = u.input_tokens ?? 0;
+        usage.cacheReadInputTokens = u.cache_read_input_tokens ?? 0;
+        usage.cacheCreationInputTokens = u.cache_creation_input_tokens ?? 0;
+        usage.outputTokens = u.output_tokens ?? 0; // 初期値。message_delta で確定値に上書きされる
+      }
+    } else if (ev.type === "message_delta") {
+      const u = (ev.usage as Record<string, number> | undefined) ?? undefined;
+      if (u?.output_tokens != null) usage.outputTokens = u.output_tokens; // 累積値（差分ではない）
+    } else if (ev.type === "content_block_start") {
       const idx = ev.index as number;
       const cb = ev.content_block as { type: string; id?: string; name?: string };
       if (cb.type === "tool_use") {
@@ -258,7 +276,7 @@ async function anthropicConverse(base: string, input: ConverseInput): Promise<Ll
         b.partialJson = (b.partialJson ?? "") + (delta.partial_json ?? "");
       }
     }
-    // content_block_stop / message_delta / message_stop は蓄積で足りるため無視
+    // content_block_stop / message_stop は蓄積で足りるため無視
   }
 
   const rawContent: unknown[] = [];
@@ -281,7 +299,7 @@ async function anthropicConverse(base: string, input: ConverseInput): Promise<Ll
       rawContent.push({ type: "text", text: b.text ?? "" });
     }
   }
-  return { text, toolCalls, rawAssistant: { role: "assistant", content: rawContent } };
+  return { text, toolCalls, rawAssistant: { role: "assistant", content: rawContent }, usage };
 }
 
 // OpenAI chat completions の tool use を 1 ターン分消費して LlmTurnResult（正準 IR）に正規化する。
@@ -291,14 +309,29 @@ async function openaiConverse(base: string, input: ConverseInput): Promise<LlmTu
     model: input.model,
     messages: toOpenAiMessages(input.system, input.messages),
     stream: true,
+    stream_options: { include_usage: true }, // 最終チャンクに usage を載せる
     ...(input.tools.length ? { tools: input.tools.map(toOpenAiTool) } : {}),
   };
   const res = await postJson(`${base}/v1/chat/completions`, authHeaders("openai", input.apiKey), body);
 
   let text = "";
   const toolAcc: { id?: string; name?: string; args: string }[] = []; // index ごと
+  let usage: LlmUsage | undefined; // 最終 usage チャンク（choices 空・usage 有り）で確定
 
   for await (const ev of parseSseEvents(res)) {
+    const u = ev.usage as
+      | { prompt_tokens?: number; completion_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } }
+      | undefined;
+    if (u) {
+      // OpenAI の prompt_tokens は cached を含むので、anthropic と意味を揃えるため cached 分を引く。
+      const cached = u.prompt_tokens_details?.cached_tokens ?? 0;
+      usage = {
+        inputTokens: Math.max(0, (u.prompt_tokens ?? 0) - cached),
+        outputTokens: u.completion_tokens ?? 0,
+        cacheReadInputTokens: cached,
+        cacheCreationInputTokens: 0, // OpenAI は自動キャッシュ・作成概念なし
+      };
+    }
     const choice = (ev.choices as { delta?: Record<string, unknown> }[] | undefined)?.[0];
     const delta = choice?.delta;
     if (!delta) continue;
@@ -339,7 +372,7 @@ async function openaiConverse(base: string, input: ConverseInput): Promise<LlmTu
     rawContent.push({ type: "tool_use", id, name: slot.name, input: parsed });
     toolCalls.push({ id, name: slot.name, input: parsed });
   });
-  return { text, toolCalls, rawAssistant: { role: "assistant", content: rawContent } };
+  return { text, toolCalls, rawAssistant: { role: "assistant", content: rawContent }, usage };
 }
 
 export function createLlmClient(): LlmClient {
