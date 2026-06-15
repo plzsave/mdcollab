@@ -270,6 +270,19 @@ export function useCreateRevision(documentId: string) {
   });
 }
 
+// ① AI レビューの指摘を本文アンカー付きコメントスレッドにする。成功後はスレッド一覧を無効化。
+export function useReviewThreads(documentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { instructions?: string }) =>
+      api.post<{ created: number; skipped: number; total: number }>(
+        `/api/documents/${documentId}/review-threads`,
+        vars,
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["threads", documentId] }),
+  });
+}
+
 // ── 通知 ─────────────────────────────────────────────────────────────
 // 既読化は通知一覧と state（ヘッダの未読バッジ）の両方を無効化する。
 

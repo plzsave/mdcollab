@@ -39,7 +39,9 @@ export function CommentPanel({
 
   const members = state?.members ?? [];
   const currentEmail = state?.currentUser.email ?? "";
-  const nameOf = (email: string) => members.find((m) => m.email === email)?.displayName || email;
+  // "ai-review" は AI レビュー（① コメントスレッド化）の sentinel 著者。メンバーではないのでバッジ表示。
+  const nameOf = (email: string) =>
+    email === "ai-review" ? "🤖 AI レビュー" : members.find((m) => m.email === email)?.displayName || email;
 
   // 既定は未解決のみ（GAS 版踏襲）。トグルで解決済みも表示。
   const [showResolved, setShowResolved] = useState(false);

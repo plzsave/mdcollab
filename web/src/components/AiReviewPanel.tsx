@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "../api/client";
-import { useAiSettings, useCreateRevision, useReviews } from "../api/hooks";
+import { useAiSettings, useCreateRevision, useReviewThreads, useReviews } from "../api/hooks";
 import { streamReview, type ReviewToolEvent, type ReviewUsage } from "../api/review-stream";
 import { renderMarkdown } from "../lib/markdown";
 import type { Review } from "../api/types";
@@ -72,6 +72,7 @@ export function AiReviewPanel({
   const { data: settings } = useAiSettings();
   const { data: reviews } = useReviews(documentId);
   const revision = useCreateRevision(documentId);
+  const threadify = useReviewThreads(documentId);
 
   const [instructions, setInstructions] = useState("");
   const [useRepo, setUseRepo] = useState(false);
@@ -83,6 +84,7 @@ export function AiReviewPanel({
   const [error, setError] = useState<string | null>(null);
   const [revised, setRevised] = useState<string | null>(null);
   const [revisedCost, setRevisedCost] = useState<{ usage: ReviewUsage; model: string } | null>(null);
+  const [threadMsg, setThreadMsg] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const configured = !!settings?.provider && !!settings.keys[settings.provider];
@@ -127,6 +129,23 @@ export function AiReviewPanel({
   };
 
   const stop = () => abortRef.current?.abort();
+
+  const makeThreads = () => {
+    setError(null);
+    setThreadMsg(null);
+    threadify.mutate(
+      { instructions: instructions.trim() || undefined },
+      {
+        onSuccess: (r) =>
+          setThreadMsg(
+            r.created > 0
+              ? `${r.created} 件の指摘をコメントにしました（コメント欄を確認してください）`
+              : "コメント化できる指摘はありませんでした",
+          ),
+        onError: (e) => setError(e instanceof ApiError ? e.message : "コメント化に失敗しました"),
+      },
+    );
+  };
 
   const makeRevision = () => {
     setError(null);
@@ -198,6 +217,14 @@ export function AiReviewPanel({
                 </button>
               )}
               <button
+                onClick={makeThreads}
+                disabled={threadify.isPending || streaming}
+                title="指摘を本文にアンカーしたコメントとして追加します"
+                className="rounded border border-indigo-300 px-3 py-1.5 text-xs text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 disabled:opacity-40"
+              >
+                {threadify.isPending ? "コメント化中…" : "指摘をコメント化"}
+              </button>
+              <button
                 onClick={makeRevision}
                 disabled={revision.isPending || streaming || !latestReviewContent}
                 title={!latestReviewContent ? "先にレビューを実行してください" : ""}
@@ -208,6 +235,7 @@ export function AiReviewPanel({
             </div>
 
             {error && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>}
+            {threadMsg && <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">{threadMsg}</p>}
 
             {tools.length > 0 && (
               <div className="mt-3">
