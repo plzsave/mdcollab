@@ -135,10 +135,36 @@ export function makeFakeGithub(): GithubClient & {
 /** pglite に本番マイグレーションを適用した drizzle インスタンスを返す。
  *  pglite 版と postgres-js 版は型が別だが、使うクエリビルダ API は同一で実行時挙動も同じ。
  *  本番型(Database)へのキャストはこのテストヘルパー内に閉じ込める。 */
+// pglite（WASM Postgres）の起動と全 migration 適用は重い。vitest はテストファイルごとに
+// 別ワーカーで走るので、ファイル内で 1 インスタンスを共有し migration は 1 回だけ適用する。
+// テスト間の独立は「全テーブル TRUNCATE で初期化」で担保する（各テストは makeHarness を 1 回呼ぶ前提）。
+let sharedClient: PGlite | undefined;
+let sharedDb: ReturnType<typeof drizzle> | undefined;
+
+async function getSharedDb(): Promise<{ client: PGlite; db: ReturnType<typeof drizzle> }> {
+  if (!sharedClient || !sharedDb) {
+    sharedClient = new PGlite(); // 引数なし＝インメモリ
+    sharedDb = drizzle(sharedClient, { schema });
+    await migrate(sharedDb, { migrationsFolder: "drizzle" }); // ファイルにつき 1 回
+  }
+  return { client: sharedClient, db: sharedDb };
+}
+
+// public スキーマの全テーブルを TRUNCATE（drizzle の移行履歴は drizzle スキーマなので残る）。
+// 列構成は migration で決まるため、テーブル名は pg_tables から動的に拾う（スキーマ変更に追従）。
+async function resetTables(client: PGlite): Promise<void> {
+  const res = await client.query<{ tablename: string }>(
+    "SELECT tablename FROM pg_tables WHERE schemaname = 'public'",
+  );
+  const tables = res.rows.map((r) => `"${r.tablename}"`);
+  if (tables.length) {
+    await client.exec(`TRUNCATE TABLE ${tables.join(", ")} RESTART IDENTITY CASCADE;`);
+  }
+}
+
 export async function makeTestDb(): Promise<Database> {
-  const client = new PGlite(); // 引数なし＝インメモリ（テストごとに独立）
-  const db = drizzle(client, { schema });
-  await migrate(db, { migrationsFolder: "drizzle" });
+  const { client, db } = await getSharedDb();
+  await resetTables(client); // 直前のテストの状態を消してまっさらに
   return db as unknown as Database;
 }
 
