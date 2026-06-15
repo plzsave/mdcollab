@@ -12,6 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "seed": "bun run scripts/seed.ts",
+    "eval:review": "bun run scripts/eval-review.ts",
     "build:web": "cd web && bun run build",
     "gen:wrangler": "bash scripts/gen-wrangler.sh",
     "deploy": "bun run gen:wrangler && bun run build:web && wrangler deploy"
