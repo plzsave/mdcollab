@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { and, eq } from "drizzle-orm";
 import type { Deps } from "../env";
 import { requireMember, requireOwner, type Vars } from "../auth/middleware";
-import { aiKeys, aiSettings, reviews, revisions, threads } from "../db/schema";
+import { aiKeys, aiReviewEvents, aiSettings, reviews, revisions, threads } from "../db/schema";
 import { encryptSecret, decryptSecret } from "../crypto";
 import { loadAiSettings, GITHUB_PREFIX } from "../ai/settings";
 
@@ -226,12 +226,30 @@ export function aiRoutes(deps: Deps) {
     const open = aiThreadRows.filter((t) => t.status === "open").length;
     const resolved = aiThreadRows.filter((t) => t.status === "resolved").length;
     const total = aiThreadRows.length;
+
+    // Tier 1: 追記ログから採用/無視の母数を正確に出す（物理削除で消えた分も superseded として残る）。
+    const eventRows = await deps.db
+      .select({ action: aiReviewEvents.action, count: aiReviewEvents.count })
+      .from(aiReviewEvents);
+    const sumOf = (action: string) =>
+      eventRows.filter((e) => e.action === action).reduce((s, e) => s + (e.count ?? 0), 0);
+    const created = sumOf("threads_created");
+    const resolvedEv = sumOf("thread_resolved");
+    const superseded = sumOf("threads_superseded");
+
     return c.json({
       reviews: summarizeRuns(reviewRows),
       revisions: summarizeRuns(revisionRows),
-      // 注: 現状は再実行時に未対応の ai-review スレを物理削除するため、無視された指摘は集計に残らない。
-      // 「却下/無視」を正確に貯めるのは Tier 1（ai_review_events 追記ログ）で行う。
+      // スナップショット（現存する ai-review スレッド）。
       aiThreads: { total, open, resolved, acceptancePct: total ? Math.round((resolved / total) * 100) : 0 },
+      // ライフタイム（追記ログ・無視された指摘も母数に残る）。採用率/ノイズ率の正確版。
+      lifetime: {
+        created,
+        resolved: resolvedEv,
+        superseded,
+        acceptancePct: created ? Math.round((resolvedEv / created) * 100) : 0,
+        ignoredPct: created ? Math.round((superseded / created) * 100) : 0,
+      },
     });
   });
 

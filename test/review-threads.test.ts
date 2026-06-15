@@ -110,6 +110,40 @@ describe("AI レビュー指摘のコメントスレッド化 (①)", () => {
     expect(thr).toHaveLength(0);
   });
 
+  it("Tier 1: created / superseded を追記する（無視された指摘も母数に残す）", async () => {
+    const h = await setup("新機能を追加する予定。改善が必要だ。");
+    h.llm.script.push(textTurn(JSON.stringify([{ quote: "新機能を追加する", comment: "c1" }])));
+    await post(h); // run1: created 1（open のまま）
+    h.llm.script.push(textTurn(JSON.stringify([{ quote: "改善が必要だ", comment: "c2" }])));
+    await post(h); // run2: 直前の open ai スレ1件を superseded、新規1件 created
+
+    const ev = await h.db.select().from(schema.aiReviewEvents);
+    const sum = (a: string) => ev.filter((e) => e.action === a).reduce((s, e) => s + (e.count ?? 0), 0);
+    expect(sum("threads_created")).toBe(2);
+    expect(sum("threads_superseded")).toBe(1);
+  });
+
+  it("Tier 1: ai-review スレ解決で thread_resolved・人間スレでは記録しない", async () => {
+    const h = await setup("新機能を追加する予定。");
+    h.llm.script.push(textTurn(JSON.stringify([{ quote: "新機能を追加する", comment: "c" }])));
+    await post(h);
+    const [ai] = await h.db
+      .select()
+      .from(schema.threads)
+      .where(eq(schema.threads.createdBy, "ai-review"));
+    await h.req(`/api/threads/${ai!.id}/resolve`, { as: "u@example.com", method: "POST" });
+
+    await h.db
+      .insert(schema.threads)
+      .values({ id: "hum", documentId: "d1", anchorText: "h", status: "open", createdBy: "u@example.com" });
+    await h.req("/api/threads/hum/resolve", { as: "u@example.com", method: "POST" });
+
+    const resolvedEv = (await h.db.select().from(schema.aiReviewEvents)).filter(
+      (e) => e.action === "thread_resolved",
+    );
+    expect(resolvedEv).toHaveLength(1); // AI スレのみ記録（人間スレは記録しない）
+  });
+
   it("AI 未設定は 400", async () => {
     const h = await makeHarness();
     await seedMember(h, "u@example.com", "member");

@@ -5,6 +5,7 @@ import { requireMember, type Vars } from "../auth/middleware";
 import { LIMITS, lengthError } from "../limits";
 import { documents, threads, comments } from "../db/schema";
 import { notify, membersAmong } from "../notify";
+import { AI_THREAD_AUTHOR, recordAiEvent } from "../ai/events";
 
 // スレッド / コメント（コラボ中核）。通知の副作用も発火（横断B）。
 //   GET    /api/documents/:id/threads        ≈ getThreadsForDocument
@@ -182,6 +183,11 @@ export function commentsRoutes(deps: Deps) {
       .update(threads)
       .set({ status: "resolved", resolvedBy: email, resolvedAt: new Date() })
       .where(eq(threads.id, threadId));
+
+    // AI レビューの指摘が解決された＝採用の信号（Tier 1）。
+    if (thread.createdBy === AI_THREAD_AUTHOR) {
+      await recordAiEvent(deps, { documentId: thread.documentId, actor: email, action: "thread_resolved", count: 1 });
+    }
 
     const doc = (
       await deps.db.select().from(documents).where(eq(documents.id, thread.documentId)).limit(1)

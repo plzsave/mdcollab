@@ -6,6 +6,7 @@ import { requireMember, type Vars } from "../auth/middleware";
 import { documents, reviews, revisions, members, aiKeys, aiSettings, threads, comments } from "../db/schema";
 import { decryptSecret } from "../crypto";
 import { anchorTextFor, parseFindings } from "../ai/findings";
+import { AI_THREAD_AUTHOR, recordAiEvent } from "../ai/events";
 import { LIMITS } from "../limits";
 import { runReviewAgent, type RunReviewAgentResult, type ToolImpl } from "../ai/reviewAgent";
 import type { LlmUsage } from "../llm/types";
@@ -114,7 +115,7 @@ function usagePayload(u: LlmUsage | undefined) {
 
 // finding モード（① コメントスレッド化）。指摘を JSON 配列で返させ、ルート側でスレッド化する。
 // 散文の逐語引用を誘導（コード/表/見出し/強調をまたぐと描画後に光らないため）＋不信任宣言（§9）。
-const AI_THREAD_AUTHOR = "ai-review"; // AI 著者の sentinel（メールではない・web がバッジ表示）
+// AI 著者の sentinel（AI_THREAD_AUTHOR）は src/ai/events.ts に集約。
 
 export function buildFindingsSystem(hasTools: boolean): string {
   const base =
@@ -350,6 +351,8 @@ export function reviewsRoutes(deps: Deps) {
       const ids = oldThreads.map((t) => t.id);
       await deps.db.delete(comments).where(inArray(comments.threadId, ids));
       await deps.db.delete(threads).where(inArray(threads.id, ids));
+      // 未対応(open)のまま置換された＝ユーザーに無視された指摘。Tier 1 で母数に残す。
+      await recordAiEvent(deps, { documentId: id, actor: email, action: "threads_superseded", count: ids.length });
     }
 
     // finding を threads + comments へ（直接 insert＝mention 通知は出さない）。
@@ -369,6 +372,9 @@ export function reviewsRoutes(deps: Deps) {
         .insert(comments)
         .values({ id: crypto.randomUUID(), threadId, content: comment, author: AI_THREAD_AUTHOR });
       created++;
+    }
+    if (created > 0) {
+      await recordAiEvent(deps, { documentId: id, actor: email, action: "threads_created", count: created });
     }
 
     return c.json({ created, skipped: findings.length - created, total: findings.length });

@@ -149,6 +149,18 @@ export const aiKeys = pgTable(
   (t) => [primaryKey({ columns: [t.email, t.provider] })],
 );
 
+// AI レビュー機能の運用イベント（追記専用・本文は含めない＝content-free）。
+// 既存テーブルでは取りこぼす信号を貯める: 指摘のスレッド化数 / 無視され置換された数（superseded）/
+// AI スレッドの解決数。採用率・ノイズ率の母数を正確にするため（Tier 1）。
+export const aiReviewEvents = pgTable("ai_review_events", {
+  id: text("id").primaryKey(),
+  documentId: text("document_id").notNull(), // 不透明 ID（本文ではない）。doc 削除に追従しないよう FK は張らない
+  actor: text("actor").notNull(), // 操作者の email（本文・指摘文は保存しない）
+  action: text("action").notNull(), // threads_created | threads_superseded | thread_resolved
+  count: integer("count"), // 件数（created/superseded）。thread_resolved は 1
+  createdAt: createdAt(),
+});
+
 // ユーザーごとの AI 設定（選択中プロバイダ/モデル・GitHub リポジトリ）。秘密は ai_keys 側。
 export const aiSettings = pgTable("ai_settings", {
   email: text("email").primaryKey(),
