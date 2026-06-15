@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
+import type { ReviewUsage } from "./review-stream";
 import type {
   AiSettings,
   AppState,
@@ -257,10 +258,15 @@ export function useReviews(documentId: string) {
 export function useCreateRevision(documentId: string) {
   return useMutation({
     mutationFn: (vars: { reviewContent?: string; instructions?: string }) =>
-      api.post<{ revised: string; provider: string; model: string; baseVersion: number }>(
-        `/api/documents/${documentId}/revision`,
-        vars,
-      ),
+      api.post<{
+        revised: string;
+        provider: string;
+        model: string;
+        baseVersion: number;
+        toolsUsed?: string[];
+        truncated?: boolean;
+        usage?: ReviewUsage;
+      }>(`/api/documents/${documentId}/revision`, vars),
   });
 }
 

@@ -381,6 +381,78 @@ describe("AI Review Agent（tool use ループ）", () => {
     expect(JSON.stringify(h.llm.converseCalls.at(-1)!.messages)).toContain("前版がありません");
   });
 
+  it("revision: 読み取り専用ツールを読んでから書き直し全文を返し pending に upsert（usage 保存）", async () => {
+    const h = await setupRepo();
+    // 1ターン目で参照コードを読み、2ターン目で書き直し全文を返す。
+    h.llm.script.push(
+      withUsage(toolTurn({ name: "fetch_repo_file", input: { path: "src/x.ts" } }), {
+        inputTokens: 60,
+        outputTokens: 10,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
+      }),
+      withUsage(textTurn("# 書き直し\n本文を整えました"), {
+        inputTokens: 40,
+        outputTokens: 90,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
+      }),
+    );
+
+    const res = await h.req("/api/documents/d1/revision", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({ reviewContent: "曖昧", instructions: "整えて" }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      revised: string;
+      toolsUsed: string[];
+      usage: { inputTokens: number; outputTokens: number };
+    };
+    expect(body.revised).toBe("# 書き直し\n本文を整えました"); // 最終全文のみ
+    expect(body.toolsUsed).toEqual(["fetch_repo_file:src/x.ts"]);
+    expect(body.usage).toEqual({ inputTokens: 100, outputTokens: 100, cacheReadTokens: 0, cacheWriteTokens: 0 });
+
+    // 読み取り専用ツールのみ（書き込み系・list_repo_tree・search_docs は持たせない）
+    const toolNames = h.llm.converseCalls.at(-1)!.tools.map((t) => t.name);
+    expect(toolNames).toEqual(["get_doc_threads", "read_doc", "fetch_repo_file"]);
+
+    // doc×user で 1 件・usage 列が保存される
+    const rows = await h.db
+      .select()
+      .from(schema.revisions)
+      .where(eq(schema.revisions.documentId, "d1"));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.content).toBe("# 書き直し\n本文を整えました");
+    expect(rows[0]!.inputTokens).toBe(100);
+    expect(rows[0]!.outputTokens).toBe(100);
+    expect(JSON.parse(rows[0]!.toolsUsed!)).toEqual(["fetch_repo_file:src/x.ts"]);
+  });
+
+  it("revision: PAT/repo 未設定なら repo ツールは付かない（doc 読み取りのみ）", async () => {
+    const h = await makeHarness();
+    await seedMember(h, "u@example.com", "member");
+    const key = await h.store.put("d1", 1, "# 文書\n本文");
+    await h.db
+      .insert(schema.documents)
+      .values({ id: "d1", title: "D", storageKey: key, version: 1, createdBy: "u@example.com" });
+    await h.req("/api/ai/settings", {
+      as: "u@example.com",
+      method: "PUT",
+      body: JSON.stringify({ provider: "anthropic", model: "claude-x", apiKey: "sk" }),
+    });
+
+    const res = await h.req("/api/documents/d1/revision", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({ instructions: "整えて" }),
+    });
+    expect(res.status).toBe(200);
+    const toolNames = h.llm.converseCalls.at(-1)!.tools.map((t) => t.name);
+    expect(toolNames).toEqual(["get_doc_threads", "read_doc"]); // fetch_repo_file は付かない
+  });
+
   it("plain review もツール（doc/workspace）を持つ", async () => {
     const h = await setupRepo();
     const res = await h.req("/api/documents/d1/review", {
