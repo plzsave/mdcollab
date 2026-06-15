@@ -2,15 +2,15 @@
 
 **前提**: [`ai-review-agent.md`](ai-review-agent.md) の Phase A〜D（tool use ループ・4ツール・Anthropic/OpenAI パリティ・web 進捗チップ）＋ search_docs 全文検索は実装・本番稼働済み。本書はその次の拡張を定める。
 
-> ステータス: **設計中（未実装）**。進捗・残タスクの追跡は [#14](https://github.com/plzsave/mdcollab/issues/14) が正。本書は設計の詳細を定める（タスクの完了状況は issue 側で管理）。
-> 対象: `src/llm/` / `src/ai/` / `src/routes/reviews.ts` / `src/github/` / `web/` / `src/db/schema.ts` / `test/`。
+> ステータス: **実装済み・本番稼働**（Phase E〜H + G2 すべて完了。[#14](https://github.com/plzsave/mdcollab/issues/14) クローズ済み）。本書は設計の詳細を定める設計記録。
+> 対象: `src/llm/` / `src/ai/` / `src/routes/reviews.ts` / `src/github/` / `src/web/` / `web/` / `src/db/schema.ts` / `test/`。
 
 ## やること / やらないこと
 
 | | 内容 |
 |---|---|
 | やる | ② 可観測性（トークン/キャッシュ計測）・⑤ 安全網（インジェクション/eval）・③ ツール拡張（差分/関連文書/web）・④ 改稿のエージェント化 |
-| やらない（保留） | ① 指摘のコメントスレッド化。理由: 実運用は **改稿（revision）での一括書き換え**が主で、細粒度コメントの需要が薄い。欲しくなったら別書で再検討 |
+| ~~やらない（保留）~~ → **後に実装** | ① 指摘のコメントスレッド化。当初は保留だったが、UX 価値（局所性・著者の制御）を理由に別書 [`ai-review-comment-threads.md`](ai-review-comment-threads.md) で設計し実装・本番稼働済み |
 
 着手順は **② → ⑤ → ③ → ④**（土台→守り→攻め）。理由: ②の計測はコスト判断の基準、⑤の eval/インジェクション網は③④でプロンプト・ツール・モデルを触る前提の安全装置。**②と④はスキーマ変更を含む**ため、各 PR は「先に本番 migrate（Actions の **db-migrate** 承認付きジョブ・#23）→ マージ→自動デプロイ」の順序が必須（search_docs と同じ。`deploy-cf` は migrate を自動実行しない）。
 
@@ -115,12 +115,14 @@ Phase B と同じ要領でツールを足す（`src/ai/reviewTools.ts` に工場
 
 ## フェーズ一覧
 
-| Phase | 内容 | スキーマ変更 | 主な対象 |
-|---|---|---|---|
-| **E（②）** | トークン/キャッシュ計測・永続化・UI 表示 | あり（reviews 列追加） | `llm/`, `ai/reviewAgent.ts`, `routes/reviews.ts`, `db/schema.ts`, `web/` |
-| **F（⑤）** | インジェクション耐性テスト＋秘匿 denylist／eval ハーネス | なし | `github/`, `ai/reviewTools.ts`, `scripts/`, `test/` |
-| **G（③）** | `get_revision_diff` / `read_doc` | なし | `ai/reviewTools.ts`, `storage/`, `routes/`, `test/` |
-| **G2（③）** | `web_fetch`（SSRF ガード）※分離・後回し | なし | `ai/reviewTools.ts`, `routes/`, `test/` |
-| **H（④）** | 改稿のエージェント化（読み取り専用ツール） | 任意（revisions 列） | `routes/reviews.ts`, `ai/`, `web/`, `test/` |
+すべて実装・本番稼働済み（PR は E=#33 / F=#36 / G=#37 / G2=#39 / H=#38）。
 
-各フェーズは独立 PR → CI → マージ。②④はマージ前に本番 migrate（Actions の **db-migrate** 承認付きジョブ・#23）。
+| Phase | 内容 | スキーマ変更 | 状態 | 主な対象 |
+|---|---|---|---|---|
+| **E（②）** | トークン/キャッシュ計測・永続化・UI 表示 | あり（reviews 列追加） | ✅ | `llm/`, `ai/reviewAgent.ts`, `routes/reviews.ts`, `db/schema.ts`, `web/` |
+| **F（⑤）** | インジェクション耐性テスト＋秘匿 denylist／eval ハーネス | なし | ✅ | `github/`, `ai/reviewTools.ts`, `scripts/`, `test/` |
+| **G（③）** | `get_revision_diff` / `read_doc` | なし | ✅ | `ai/reviewTools.ts`, `storage/`, `routes/`, `test/` |
+| **G2（③）** | `web_fetch`（SSRF ガード） | なし | ✅ | `ai/reviewTools.ts`, `web/client.ts`, `routes/`, `test/` |
+| **H（④）** | 改稿のエージェント化（読み取り専用ツール） | あり（revisions 列） | ✅ | `routes/reviews.ts`, `ai/`, `web/`, `test/` |
+
+各フェーズは独立 PR → CI → マージ。②④Hはマージ前に本番 migrate（Actions の **db-migrate** 承認付きジョブ・#23）。

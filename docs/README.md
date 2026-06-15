@@ -17,7 +17,8 @@ mdcollab のドキュメント一覧。プロジェクト概要は [../README.md
 | ドキュメント | 内容 |
 |---|---|
 | [ai-review-agent.md](ai-review-agent.md) | AI レビューの tool use エージェント化（A〜D + search_docs 全文検索）の設計と実装メモ。実装済み |
-| [ai-review-agent-v2.md](ai-review-agent-v2.md) | エージェント拡張の続編設計（② 可観測性 / ⑤ 安全網 / ③ ツール拡張 / ④ 改稿エージェント化）。設計中・未実装（追跡は [#14](https://github.com/plzsave/mdcollab/issues/14)） |
+| [ai-review-agent-v2.md](ai-review-agent-v2.md) | エージェント拡張の続編設計（② 可観測性 / ⑤ 安全網 / ③ ツール拡張 + G2 web_fetch / ④ 改稿エージェント化）。**実装済み・本番稼働**（#14 完了） |
+| [ai-review-comment-threads.md](ai-review-comment-threads.md) | ① 指摘のコメントスレッド化（構造化 finding→アンカー付き AI スレッド）の設計。**実装済み・本番稼働** |
 
 ## アーカイブ
 
