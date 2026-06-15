@@ -71,6 +71,27 @@ describe("applyHighlights", () => {
     expect(mark!.closest("pre")).toBeNull();
   });
 
+  it("cross-node: インラインコードをまたぐアンカーを複数 mark で包む", () => {
+    // 描画後は "PAT は " + <code>ai_keys</code> + " に保存" の 3 テキストノード。
+    const el = container("<p>PAT は <code>ai_keys</code> に保存する</p>");
+    applyHighlights(el, [thread({ id: "X", anchorText: "ai_keys に保存" })], null);
+    const marks = el.querySelectorAll('mark[data-thread-id="X"]');
+    expect(marks.length).toBeGreaterThanOrEqual(2); // 複数ノードにまたがって包まれる
+    // 包まれた断片を連結すると元のアンカーになる
+    const joined = Array.from(marks)
+      .map((m) => m.textContent)
+      .join("");
+    expect(joined).toBe("ai_keys に保存");
+    // コード内の断片も mark で包まれている
+    expect(el.querySelector("code mark")).not.toBeNull();
+  });
+
+  it("ブロックをまたぐ誤一致はしない（段落境界で連結しない）", () => {
+    const el = container("<p>foo</p><p>bar</p>");
+    applyHighlights(el, [thread({ id: "B", anchorText: "foobar" })], null);
+    expect(el.querySelector("mark")).toBeNull();
+  });
+
   it("空アンカー / 不一致は何もしない", () => {
     const el = container("<p>hello</p>");
     applyHighlights(el, [thread({ anchorText: "" }), thread({ anchorText: "zzz" })], null);

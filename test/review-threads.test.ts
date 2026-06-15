@@ -54,7 +54,7 @@ describe("AI レビュー指摘のコメントスレッド化 (①)", () => {
     expect(cms[0]!.content).toContain("制限を設けるべき");
   });
 
-  it("degrade: 光らない引用（インラインコードまたぎ）でもスレッドは作る", async () => {
+  it("インラインコードまたぎの引用は正規化して保存（cross-node ハイライタで光る形）", async () => {
     const h = await setup("PAT は `ai_keys` テーブルに平文で保存する。");
     h.llm.script.push(
       textTurn(JSON.stringify([{ quote: "`ai_keys` テーブルに平文で保存", comment: "暗号化すべき" }])),
@@ -64,8 +64,8 @@ describe("AI レビュー指摘のコメントスレッド化 (①)", () => {
     expect((await res.json()).created).toBe(1);
     const thr = await h.db.select().from(schema.threads).where(eq(schema.threads.documentId, "d1"));
     expect(thr).toHaveLength(1);
-    // 光らないので raw quote をそのまま anchorText に（パネルには出る）
-    expect(thr[0]!.anchorText).toBe("`ai_keys` テーブルに平文で保存");
+    // anchorText は描画後の可視形（バッククォートを外す）＝cross-node ハイライタが光らせられる形
+    expect(thr[0]!.anchorText).toBe("ai_keys テーブルに平文で保存");
   });
 
   it("再実行は ai-review の open スレを置換し、resolved と人間スレは残す", async () => {

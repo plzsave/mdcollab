@@ -75,16 +75,15 @@ describe("renderedSegments / isHighlightable（描画後ハイライト可能性
     expect(isHighlightable(md, "Issue 作成にレート制限は設けない")).toBe(true);
   });
 
-  it("インラインコードをまたぐ引用は不可（CODE ノードで分断）", () => {
+  it("cross-node: インラインコードをまたぐ引用も可（中身は描画後テキストで可視）", () => {
     const md = "PAT は `ai_keys` テーブルに平文で保存し利用する。";
-    expect(isHighlightable(md, "ai_keys` テーブルに平文で保存")).toBe(false);
-    // コードの後ろの地の文だけなら可
+    expect(isHighlightable(md, "ai_keys テーブルに平文で保存")).toBe(true);
     expect(isHighlightable(md, "テーブルに平文で保存し利用する")).toBe(true);
   });
 
-  it("強調をまたぐ引用は不可", () => {
+  it("cross-node: 強調をまたぐ引用も可", () => {
     const md = "- **Phase 2**: スレッド → issue コメント同期\n";
-    expect(isHighlightable(md, "Phase 2**: スレッド")).toBe(false);
+    expect(isHighlightable(md, "Phase 2: スレッド")).toBe(true);
     expect(isHighlightable(md, "スレッド → issue コメント同期")).toBe(true);
   });
 
@@ -100,8 +99,17 @@ describe("renderedSegments / isHighlightable（描画後ハイライト可能性
     expect(isHighlightable(md, "説明文")).toBe(true);
   });
 
-  it("renderedSegments は装飾を外した素片を返す", () => {
-    expect(renderedSegments("**太字** と普通")).toContain("太字");
-    expect(renderedSegments("詳細は [リンク](http://x) を参照")).toContain("リンク");
+  it("renderedSegments は装飾を外し、インライン要素は同一素片に溶かす", () => {
+    expect(renderedSegments("**太字** と普通")).toEqual(["太字 と普通"]); // 強調は境界にしない
+    expect(renderedSegments("詳細は [リンク](http://x) を参照")).toEqual(["詳細は リンク を参照"]);
+  });
+
+  it("語中のアンダースコア（識別子）は残し、強調の _ だけ外す", () => {
+    // インラインコードの中身 `ai_keys` は可視・識別子の _ も保たれる
+    expect(isHighlightable("PAT は `ai_keys` に保存", "ai_keys に保存")).toBe(true);
+    // doc_id（地の文の識別子）も保持
+    expect(isHighlightable("リクエストは doc_id を持つ", "doc_id を持つ")).toBe(true);
+    // 強調 _italic_ は外れる（描画後は "italic"・引用側のマーカーも正規化で外れる）
+    expect(isHighlightable("これは _italic_ です", "italic")).toBe(true);
   });
 });

@@ -356,7 +356,7 @@ export function reviewsRoutes(deps: Deps) {
     let created = 0;
     for (const f of findings) {
       const comment = f.comment.trim().slice(0, LIMITS.commentBody);
-      const anchorText = anchorTextFor(loaded.content, f.quote).slice(0, LIMITS.anchorText);
+      const anchorText = anchorTextFor(f.quote).slice(0, LIMITS.anchorText);
       if (!comment || !anchorText) continue;
       const threadId = crypto.randomUUID();
       await deps.db.insert(threads).values({
