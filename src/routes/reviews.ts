@@ -10,7 +10,9 @@ import type { LlmUsage } from "../llm/types";
 import {
   fetchRepoFileTool,
   getDocThreadsTool,
+  getRevisionDiffTool,
   listRepoTreeTool,
+  readDocTool,
   searchDocsTool,
 } from "../ai/reviewTools";
 
@@ -137,6 +139,8 @@ export function reviewsRoutes(deps: Deps) {
     const tools: ToolImpl[] = [
       getDocThreadsTool(deps, id),
       searchDocsTool(deps, id),
+      readDocTool(deps),
+      getRevisionDiffTool(deps, id),
       ...(opts.repoTools ?? []),
     ];
     const system = buildSystem(tools.length > 0);

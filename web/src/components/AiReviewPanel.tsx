@@ -39,6 +39,10 @@ function toolLabel({ name, arg }: ReviewToolEvent): string {
       return "💬 コメントスレッドを参照";
     case "search_docs":
       return `🔎 「${String(arg.query ?? "")}」で文書を検索`;
+    case "read_doc":
+      return `📖 文書（${String(arg.id ?? "")}）の全文を参照`;
+    case "get_revision_diff":
+      return "🔁 前版からの変更（差分）を参照";
     default:
       return `🛠 ${name}`;
   }
