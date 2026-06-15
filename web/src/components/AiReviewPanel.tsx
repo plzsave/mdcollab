@@ -43,6 +43,15 @@ function toolLabel({ name, arg }: ReviewToolEvent): string {
       return `📖 文書（${String(arg.id ?? "")}）の全文を参照`;
     case "get_revision_diff":
       return "🔁 前版からの変更（差分）を参照";
+    case "web_fetch": {
+      let host = String(arg.url ?? "");
+      try {
+        host = new URL(String(arg.url ?? "")).host;
+      } catch {
+        /* URL でなければそのまま表示 */
+      }
+      return `🌐 ${host} を取得`;
+    }
     default:
       return `🛠 ${name}`;
   }
