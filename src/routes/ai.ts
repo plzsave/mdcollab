@@ -1,10 +1,63 @@
 import { Hono } from "hono";
 import { and, eq } from "drizzle-orm";
 import type { Deps } from "../env";
-import { requireMember, type Vars } from "../auth/middleware";
-import { aiKeys, aiSettings } from "../db/schema";
+import { requireMember, requireOwner, type Vars } from "../auth/middleware";
+import { aiKeys, aiSettings, reviews, revisions, threads } from "../db/schema";
 import { encryptSecret, decryptSecret } from "../crypto";
 import { loadAiSettings, GITHUB_PREFIX } from "../ai/settings";
+
+// AI 実行のコスト/利用を content-free（本文を含めず集計値のみ）に要約する（運用の可視化・Tier 0）。
+// reviews/revisions の usage 列（Phase E/H）と、ai-review スレッドの反応を既存テーブルから読むだけ。
+interface UsageRow {
+  provider: string | null;
+  model: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
+  truncated?: boolean | null;
+}
+
+function summarizeRuns(rows: UsageRow[]) {
+  const groups = new Map<
+    string,
+    { provider: string; model: string; count: number; in: number; out: number; cr: number; cw: number; truncated: number; withUsage: number }
+  >();
+  for (const r of rows) {
+    const provider = r.provider ?? "?";
+    const model = r.model ?? "?";
+    const key = `${provider}/${model}`;
+    const g =
+      groups.get(key) ??
+      { provider, model, count: 0, in: 0, out: 0, cr: 0, cw: 0, truncated: 0, withUsage: 0 };
+    g.count++;
+    if (r.truncated) g.truncated++;
+    const hasUsage = r.inputTokens != null || r.outputTokens != null;
+    if (hasUsage) {
+      g.withUsage++;
+      g.in += r.inputTokens ?? 0;
+      g.out += r.outputTokens ?? 0;
+      g.cr += r.cacheReadTokens ?? 0;
+      g.cw += r.cacheWriteTokens ?? 0;
+    }
+    groups.set(key, g);
+  }
+  const byModel = [...groups.values()].map((g) => {
+    const totalIn = g.in + g.cr + g.cw;
+    const n = g.withUsage || 1;
+    return {
+      provider: g.provider,
+      model: g.model,
+      count: g.count,
+      truncated: g.truncated,
+      inputAvg: Math.round(g.in / n),
+      outputAvg: Math.round(g.out / n),
+      cacheReadAvg: Math.round(g.cr / n),
+      cacheHitPct: totalIn ? Math.round((g.cr / totalIn) * 100) : 0,
+    };
+  });
+  return { total: rows.length, byModel };
+}
 
 // AI 設定 / 秘密（すべて本人のみ）。**キー平文はクライアントへ返さない**不変条件（§6.5）。
 //   GET    /api/ai/settings          ≈ getAiSettings（has-key 真偽のみ）
@@ -138,6 +191,48 @@ export function aiRoutes(deps: Deps) {
         502,
       );
     }
+  });
+
+  // 運用可視化（Tier 0・owner 限定）。本文は一切含まない集計値のみ。
+  // 既存の reviews/revisions usage 列と ai-review スレッドの反応から、コスト/キャッシュ効き/採用の現状を出す。
+  app.get("/metrics", requireOwner(), async (c) => {
+    const reviewRows = await deps.db
+      .select({
+        provider: reviews.provider,
+        model: reviews.model,
+        inputTokens: reviews.inputTokens,
+        outputTokens: reviews.outputTokens,
+        cacheReadTokens: reviews.cacheReadTokens,
+        cacheWriteTokens: reviews.cacheWriteTokens,
+        truncated: reviews.truncated,
+      })
+      .from(reviews);
+    const revisionRows = await deps.db
+      .select({
+        provider: revisions.provider,
+        model: revisions.model,
+        inputTokens: revisions.inputTokens,
+        outputTokens: revisions.outputTokens,
+        cacheReadTokens: revisions.cacheReadTokens,
+        cacheWriteTokens: revisions.cacheWriteTokens,
+        truncated: revisions.truncated,
+      })
+      .from(revisions);
+    const aiThreadRows = await deps.db
+      .select({ status: threads.status })
+      .from(threads)
+      .where(eq(threads.createdBy, "ai-review"));
+
+    const open = aiThreadRows.filter((t) => t.status === "open").length;
+    const resolved = aiThreadRows.filter((t) => t.status === "resolved").length;
+    const total = aiThreadRows.length;
+    return c.json({
+      reviews: summarizeRuns(reviewRows),
+      revisions: summarizeRuns(revisionRows),
+      // 注: 現状は再実行時に未対応の ai-review スレを物理削除するため、無視された指摘は集計に残らない。
+      // 「却下/無視」を正確に貯めるのは Tier 1（ai_review_events 追記ログ）で行う。
+      aiThreads: { total, open, resolved, acceptancePct: total ? Math.round((resolved / total) * 100) : 0 },
+    });
   });
 
   return app;
