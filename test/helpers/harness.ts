@@ -13,6 +13,7 @@ import type { Database } from "../../src/db/client";
 import type { DocumentStore } from "../../src/storage/types";
 import type { ConverseInput, LlmClient, LlmInput, LlmTurnResult } from "../../src/llm/types";
 import type { GithubClient } from "../../src/github/types";
+import type { WebClient } from "../../src/web/types";
 import type { AppConfig, Deps } from "../../src/env";
 
 const TEST_SECRET = "test-secret";
@@ -132,6 +133,18 @@ export function makeFakeGithub(): GithubClient & {
   };
 }
 
+/** ネットワーク不要の fake WebClient。fetchUrl の呼び出しを記録する（SSRF 実体は web/client のユニットで検証）。 */
+export function makeFakeWeb(): WebClient & { calls: string[] } {
+  const calls: string[] = [];
+  return {
+    calls,
+    async fetchUrl(url) {
+      calls.push(url);
+      return `FAKE-WEB(${url})`;
+    },
+  };
+}
+
 /** pglite に本番マイグレーションを適用した drizzle インスタンスを返す。
  *  pglite 版と postgres-js 版は型が別だが、使うクエリビルダ API は同一で実行時挙動も同じ。
  *  本番型(Database)へのキャストはこのテストヘルパー内に閉じ込める。 */
@@ -193,6 +206,7 @@ export interface Harness {
   store: ReturnType<typeof makeMemoryStore>;
   llm: ReturnType<typeof makeFakeLlm>;
   github: ReturnType<typeof makeFakeGithub>;
+  web: ReturnType<typeof makeFakeWeb>;
   config: AppConfig;
   app: ReturnType<typeof createApp>;
   /** email 用の Cookie ヘッダ値（"mdcollab_session=..."）を発行 */
@@ -206,6 +220,7 @@ export async function makeHarness(configOverride: Partial<AppConfig> = {}): Prom
   const store = makeMemoryStore();
   const llm = makeFakeLlm();
   const github = makeFakeGithub();
+  const web = makeFakeWeb();
   const config: AppConfig = {
     baseUrl: "http://localhost",
     sessionSecret: TEST_SECRET,
@@ -213,7 +228,7 @@ export async function makeHarness(configOverride: Partial<AppConfig> = {}): Prom
     google: { clientId: "x", clientSecret: "x" },
     ...configOverride,
   };
-  const deps: Deps = { db, store, llm, github, config };
+  const deps: Deps = { db, store, llm, github, web, config };
   const app = createApp(deps);
 
   async function cookie(email: string, name?: string) {
@@ -229,7 +244,7 @@ export async function makeHarness(configOverride: Partial<AppConfig> = {}): Prom
     return app.request(path, { ...rest, headers: h });
   }
 
-  return { db, store, llm, github, config, app, cookie, req };
+  return { db, store, llm, github, web, config, app, cookie, req };
 }
 
 /** members に1行入れるショートカット。テストの前提作りに使う。 */

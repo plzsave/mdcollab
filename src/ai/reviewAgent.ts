@@ -61,6 +61,7 @@ function describeArg(input: unknown): string {
     if (typeof o.path === "string") return o.path;
     if (typeof o.query === "string") return o.query;
     if (typeof o.id === "string") return o.id; // read_doc
+    if (typeof o.url === "string") return o.url; // web_fetch
     if (Object.keys(o).length === 0) return ""; // 引数なしツール（get_doc_threads / list_repo_tree / get_revision_diff）
   }
   try {

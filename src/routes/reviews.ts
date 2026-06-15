@@ -14,6 +14,7 @@ import {
   listRepoTreeTool,
   readDocTool,
   searchDocsTool,
+  webFetchTool,
 } from "../ai/reviewTools";
 
 // AI レビュー / 改稿。
@@ -157,6 +158,7 @@ export function reviewsRoutes(deps: Deps) {
       searchDocsTool(deps, id),
       readDocTool(deps),
       getRevisionDiffTool(deps, id),
+      webFetchTool(deps),
       ...(opts.repoTools ?? []),
     ];
     const system = buildSystem(tools.length > 0);

@@ -4,6 +4,8 @@ import { createDb } from "../db/client";
 import { createStore } from "../storage";
 import { createLlmClient } from "../llm/providers";
 import { createGithubClient } from "../github/client";
+import { createWebClient } from "../web/client";
+import { lookup } from "node:dns/promises";
 import type { AppConfig } from "../env";
 
 // ローカル開発 / 職場 AWS(Fargate/App Runner)用 Node エントリ。
@@ -42,7 +44,13 @@ const config: AppConfig = {
   devAuth,
 };
 
-const app = createApp({ db, store, llm: createLlmClient(), github: createGithubClient(), config });
+// Node では DNS 解決を渡す＝web_fetch がホスト名解決後の IP で SSRF 判定できる（リバインディング対策）。
+// AWS/Fargate は 169.254.169.254 メタデータに到達しうるため、この検査が効く。
+const web = createWebClient({
+  resolveHost: async (host) => (await lookup(host, { all: true })).map((r) => r.address),
+});
+
+const app = createApp({ db, store, llm: createLlmClient(), github: createGithubClient(), web, config });
 const port = Number(process.env.PORT ?? 8787);
 serve({ fetch: app.fetch, port });
 // eslint-disable-next-line no-console

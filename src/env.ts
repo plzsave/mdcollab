@@ -2,6 +2,7 @@ import type { Database } from "./db/client";
 import type { DocumentStore } from "./storage";
 import type { LlmClient } from "./llm/types";
 import type { GithubClient } from "./github/types";
+import type { WebClient } from "./web/types";
 
 export interface AppConfig {
   baseUrl: string;
@@ -24,5 +25,6 @@ export interface Deps {
   store: DocumentStore;
   llm: LlmClient;
   github: GithubClient;
+  web: WebClient;
   config: AppConfig;
 }

@@ -266,6 +266,28 @@ export function readDocTool(deps: Deps): ToolImpl {
   };
 }
 
+// web_fetch: 文書内の外部リンク（https）の内容を取得（SSRF ガードは deps.web 側）。
+// 本文は信頼できない入力＝攻撃面なので、ガード済みの WebClient 越しにのみ取得する。
+export function webFetchTool(deps: Deps): ToolImpl {
+  return {
+    def: {
+      name: "web_fetch",
+      description:
+        "文書内の外部リンク（https の URL）の内容を取得して確認する。本文が参照する外部ページの生存や内容を確かめたいときにのみ呼ぶ。",
+      inputSchema: {
+        type: "object",
+        properties: { url: { type: "string", description: "取得する https URL" } },
+        required: ["url"],
+      },
+    },
+    async execute(input) {
+      const url = strInput(input, "url");
+      if (!url) return "（不正な入力: url を文字列で指定してください）";
+      return deps.web.fetchUrl(url);
+    },
+  };
+}
+
 // get_revision_diff: レビュー中の文書の前版→現版の差分（当該 doc 限定）。
 // 版ごとに storageKey を持つ documentVersions から直近 2 版を読み行 diff を返す。
 export function getRevisionDiffTool(deps: Deps, documentId: string): ToolImpl {

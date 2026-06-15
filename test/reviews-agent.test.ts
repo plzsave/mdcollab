@@ -159,7 +159,13 @@ describe("AI Review Agent（tool use ループ）", () => {
     expect(res.status).toBe(200);
     // doc/workspace ツールは付くが、PAT 無しなので repo ツール（fetch_repo_file/list_repo_tree）は付かない
     const toolNames = h.llm.converseCalls.at(-1)!.tools.map((t) => t.name);
-    expect(toolNames).toEqual(["get_doc_threads", "search_docs", "read_doc", "get_revision_diff"]);
+    expect(toolNames).toEqual([
+      "get_doc_threads",
+      "search_docs",
+      "read_doc",
+      "get_revision_diff",
+      "web_fetch",
+    ]);
     expect(h.github.fileCalls).toHaveLength(0);
     expect(h.github.treeCalls).toHaveLength(0);
   });
@@ -453,6 +459,24 @@ describe("AI Review Agent（tool use ループ）", () => {
     expect(toolNames).toEqual(["get_doc_threads", "read_doc"]); // fetch_repo_file は付かない
   });
 
+  it("web_fetch: tool_use で url を WebClient に渡し結果を tool_result に積む（G2）", async () => {
+    const h = await setupRepo();
+    h.llm.script.push(
+      toolTurn({ name: "web_fetch", input: { url: "https://example.com/spec" } }),
+      textTurn("外部仕様を確認"),
+    );
+    const res = await h.req("/api/documents/d1/review", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { toolsUsed: string[] };
+    expect(body.toolsUsed).toEqual(["web_fetch:https://example.com/spec"]); // describeArg が url を表示
+    expect(h.web.calls).toEqual(["https://example.com/spec"]); // ガード付き WebClient に委譲
+    expect(JSON.stringify(h.llm.converseCalls.at(-1)!.messages)).toContain("FAKE-WEB(https://example.com/spec)");
+  });
+
   it("plain review もツール（doc/workspace）を持つ", async () => {
     const h = await setupRepo();
     const res = await h.req("/api/documents/d1/review", {
@@ -462,7 +486,13 @@ describe("AI Review Agent（tool use ループ）", () => {
     });
     expect(res.status).toBe(200);
     const toolNames = h.llm.converseCalls.at(-1)!.tools.map((t) => t.name);
-    expect(toolNames).toEqual(["get_doc_threads", "search_docs", "read_doc", "get_revision_diff"]);
+    expect(toolNames).toEqual([
+      "get_doc_threads",
+      "search_docs",
+      "read_doc",
+      "get_revision_diff",
+      "web_fetch",
+    ]);
   });
 });
 
