@@ -127,6 +127,13 @@ export const revisions = pgTable(
     provider: text("provider"),
     model: text("model"),
     createdAt: createdAt(),
+    // コスト可観測性（Phase H・reviews と同じ意味）。usage 非対応プロバイダや旧行では null。
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    cacheReadTokens: integer("cache_read_tokens"),
+    cacheWriteTokens: integer("cache_write_tokens"),
+    toolsUsed: text("tools_used"), // 使用ツールの JSON 文字列（string[]）
+    truncated: boolean("truncated").notNull().default(false),
   },
   (t) => [uniqueIndex("revisions_doc_user_uniq").on(t.documentId, t.createdBy)],
 );

@@ -73,6 +73,7 @@ export function AiReviewPanel({
   const [cost, setCost] = useState<{ usage: ReviewUsage; model: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revised, setRevised] = useState<string | null>(null);
+  const [revisedCost, setRevisedCost] = useState<{ usage: ReviewUsage; model: string } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const configured = !!settings?.provider && !!settings.keys[settings.provider];
@@ -120,10 +121,14 @@ export function AiReviewPanel({
 
   const makeRevision = () => {
     setError(null);
+    setRevisedCost(null);
     revision.mutate(
       { reviewContent: latestReviewContent || undefined, instructions: instructions.trim() || undefined },
       {
-        onSuccess: (res) => setRevised(res.revised),
+        onSuccess: (res) => {
+          setRevised(res.revised);
+          if (res.usage) setRevisedCost({ usage: res.usage, model: res.model });
+        },
         onError: (e) => setError(e instanceof ApiError ? e.message : "改稿の生成に失敗しました"),
       },
     );
@@ -238,11 +243,16 @@ export function AiReviewPanel({
             {revised !== null && (
               <RevisionPreview
                 revised={revised}
+                cost={revisedCost ? formatCost(revisedCost.usage, revisedCost.model) : null}
                 onApply={() => {
                   onApplyRevision(revised);
                   setRevised(null);
+                  setRevisedCost(null);
                 }}
-                onDiscard={() => setRevised(null)}
+                onDiscard={() => {
+                  setRevised(null);
+                  setRevisedCost(null);
+                }}
               />
             )}
 
@@ -256,10 +266,12 @@ export function AiReviewPanel({
 
 function RevisionPreview({
   revised,
+  cost,
   onApply,
   onDiscard,
 }: {
   revised: string;
+  cost: string | null;
   onApply: () => void;
   onDiscard: () => void;
 }) {
@@ -280,6 +292,7 @@ function RevisionPreview({
           エディタに反映
         </button>
       </div>
+      {cost && <p className="mt-1 text-[11px] text-slate-400">{cost}</p>}
       <p className="mt-1 text-[11px] text-indigo-500">
         反映後、内容を確認してから「保存」してください。
       </p>
