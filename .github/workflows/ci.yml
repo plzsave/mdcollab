@@ -10,7 +10,18 @@ name: ci
 on:
   push:
     branches: [main]
+    # docs だけの push（例: README/設計書）は build/deploy 不要なのでスキップ。
+    # ※ pull_request 側はフィルタしない＝必須ステータスチェックが常に報告され、PR のマージゲートが壊れない。
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   pull_request:
+
+# 同一 ref で新しい push が来たら古い実行をキャンセル（無駄打ち削減・フィードバック高速化）。
+# main はデプロイを途中で殺さないようキャンセルしない。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   check:
