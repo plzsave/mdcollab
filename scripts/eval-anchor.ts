@@ -11,6 +11,7 @@
 // 注: web のハイライトはレンダリング後テキストへ indexOf で当てる（web/src/lib/highlight.ts）。
 //     本スパイクは「逐語スパンを再現できるか」を生 Markdown 本文に対して測る一次指標。
 //     高ければ次段で『レンダリング後テキストへの対応づけ』を詰める。低ければ ① は要再設計。
+import { readdirSync, readFileSync } from "node:fs";
 import { createLlmClient } from "../src/llm/providers";
 import { anchorQuote, parseFindings } from "../src/ai/findings";
 
@@ -19,21 +20,13 @@ interface Doc {
   body: string;
 }
 
-// 既知の問題を仕込んだゴールデン文書（逐語引用しやすいよう、本文に固有語を含める）。
-const DOCS: Doc[] = [
-  {
-    name: "API ガイド（事実誤り）",
-    body: "# API ガイド\n\n本 API は成功時に HTTP 200 を返します。なお 200 はリクエスト失敗を表すため、クライアントは 200 を受け取ったら必ずリトライしてください。タイムアウトは 30 秒です。\n",
-  },
-  {
-    name: "設計メモ（曖昧・受動態）",
-    body: "# 設計メモ\n\nデータは適切に処理されます。エラーは必要に応じて対応されます。キャッシュは十分な期間保持され、パフォーマンスは確保されています。\n",
-  },
-  {
-    name: "手順書（用語ゆれ・壊れたリンク）",
-    body: "# セットアップ手順\n\nまず利用者はアカウントを作成します。次にユーザは API キーを発行します。詳細は [こちら](http:// を参照してください。最後にユーザーは疎通確認を行います。\n",
-  },
-];
+// scripts/eval-fixtures/ の *.md（README.md を除く）をゴールデン文書として読み込む。
+// フィクスチャは「意図的に問題を仕込んだ検証用 MD」。増減はファイルを足し引きするだけ。
+const FIXT_DIR = new URL("./eval-fixtures/", import.meta.url);
+const DOCS: Doc[] = readdirSync(FIXT_DIR)
+  .filter((f) => f.endsWith(".md") && f !== "README.md")
+  .sort()
+  .map((f) => ({ name: f, body: readFileSync(new URL(f, FIXT_DIR), "utf8") }));
 
 function required(name: string): string {
   const v = process.env[name];
