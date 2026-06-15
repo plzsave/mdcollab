@@ -3,9 +3,30 @@ import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "../api/client";
 import { useAiSettings, useCreateRevision, useReviews } from "../api/hooks";
-import { streamReview, type ReviewToolEvent } from "../api/review-stream";
+import { streamReview, type ReviewToolEvent, type ReviewUsage } from "../api/review-stream";
 import { renderMarkdown } from "../lib/markdown";
 import type { Review } from "../api/types";
+
+function formatTokens(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+}
+
+// コスト 1 行（例: 「入力 12.3k（キャッシュ 80%）/ 出力 1.2k・claude-opus-4-8」）。
+// usage が無い（旧レビュー / 非対応プロバイダ）場合は null。総入力 = 新規入力 + キャッシュ読込 + キャッシュ作成。
+function formatCost(
+  u: { inputTokens: number | null; outputTokens: number | null; cacheReadTokens: number | null; cacheWriteTokens: number | null },
+  model: string,
+): string | null {
+  if (u.inputTokens == null && u.outputTokens == null && u.cacheReadTokens == null && u.cacheWriteTokens == null) {
+    return null;
+  }
+  const input = u.inputTokens ?? 0;
+  const cacheRead = u.cacheReadTokens ?? 0;
+  const cacheWrite = u.cacheWriteTokens ?? 0;
+  const totalInput = input + cacheRead + cacheWrite;
+  const cachePct = totalInput > 0 ? Math.round((cacheRead / totalInput) * 100) : 0;
+  return `入力 ${formatTokens(totalInput)}（キャッシュ ${cachePct}%）/ 出力 ${formatTokens(u.outputTokens ?? 0)}・${model}`;
+}
 
 // エージェントが呼んだツールを人間向けラベルに（§9 透明性＝何を読んだか可視化）。
 function toolLabel({ name, arg }: ReviewToolEvent): string {
@@ -45,6 +66,7 @@ export function AiReviewPanel({
   const [streamText, setStreamText] = useState("");
   const [tools, setTools] = useState<ReviewToolEvent[]>([]);
   const [truncated, setTruncated] = useState(false);
+  const [cost, setCost] = useState<{ usage: ReviewUsage; model: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revised, setRevised] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -61,6 +83,7 @@ export function AiReviewPanel({
     setStreamText("");
     setTools([]);
     setTruncated(false);
+    setCost(null);
     setStreaming(true);
     const ac = new AbortController();
     abortRef.current = ac;
@@ -73,6 +96,7 @@ export function AiReviewPanel({
           onTool: (tool) => setTools((prev) => [...prev, tool]),
           onDone: (meta) => {
             setTruncated(!!meta.truncated);
+            if (meta.usage) setCost({ usage: meta.usage, model: meta.model });
             qc.invalidateQueries({ queryKey: ["reviews", documentId] });
           },
         },
@@ -201,6 +225,9 @@ export function AiReviewPanel({
                   className="md-preview max-h-80 overflow-y-auto rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3"
                   dangerouslySetInnerHTML={{ __html: streamHtml }}
                 />
+                {cost && (
+                  <p className="mt-1 text-[11px] text-slate-400">{formatCost(cost.usage, cost.model)}</p>
+                )}
               </div>
             )}
 
@@ -284,10 +311,15 @@ function PastReviews({ reviews }: { reviews: Review[] | undefined }) {
                 <span className="text-slate-400">{expanded ? "▲" : "▼"}</span>
               </button>
               {expanded && (
-                <div
-                  className="md-preview border-t border-slate-100 dark:border-slate-800 px-3 py-2"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(r.content) }}
-                />
+                <div className="border-t border-slate-100 dark:border-slate-800 px-3 py-2">
+                  <div
+                    className="md-preview"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(r.content) }}
+                  />
+                  {formatCost(r, r.model) && (
+                    <p className="mt-2 text-[11px] text-slate-400">{formatCost(r, r.model)}</p>
+                  )}
+                </div>
               )}
             </div>
           );

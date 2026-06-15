@@ -9,6 +9,17 @@ export interface LlmInput {
   prompt: string;
 }
 
+// 1ターンのトークン使用量（プロバイダ非依存に正規化）。
+// inputTokens は「キャッシュに当たらなかった新規入力」を指す（anthropic の input_tokens 相当）。
+// OpenAI は prompt_tokens が cached を含むので providers.ts で cached 分を差し引いて揃える。
+// 総入力 = inputTokens + cacheReadInputTokens + cacheCreationInputTokens。
+export interface LlmUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+}
+
 // ツール定義（プロバイダ非依存の正規形）。description は「いつ呼ぶか」を明記する（公式推奨）。
 export interface ToolDef {
   name: string;
@@ -29,6 +40,8 @@ export interface LlmTurnResult {
    * 非 anthropic 経路など tool 非対応時は null。
    */
   rawAssistant: unknown;
+  /** このターンのトークン使用量。プロバイダが usage を返さない場合は undefined。 */
+  usage?: LlmUsage;
 }
 
 export interface ConverseInput {

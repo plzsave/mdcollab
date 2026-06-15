@@ -5,7 +5,8 @@ import type { Deps } from "../env";
 import { requireMember, type Vars } from "../auth/middleware";
 import { documents, reviews, revisions, members, aiKeys, aiSettings } from "../db/schema";
 import { decryptSecret } from "../crypto";
-import { runReviewAgent, type ToolImpl } from "../ai/reviewAgent";
+import { runReviewAgent, type RunReviewAgentResult, type ToolImpl } from "../ai/reviewAgent";
+import type { LlmUsage } from "../llm/types";
 import {
   fetchRepoFileTool,
   getDocThreadsTool,
@@ -94,6 +95,18 @@ function buildSystem(hasTools: boolean): string {
   );
 }
 
+// usage を応答（SSE done / JSON）向けに整形。列名（cacheRead/cacheWrite）に揃える。
+// usage を返さなかった場合（旧/非対応プロバイダ・fake）は undefined。
+function usagePayload(u: LlmUsage | undefined) {
+  if (!u) return undefined;
+  return {
+    inputTokens: u.inputTokens,
+    outputTokens: u.outputTokens,
+    cacheReadTokens: u.cacheReadInputTokens,
+    cacheWriteTokens: u.cacheCreationInputTokens,
+  };
+}
+
 type Ctx = Context<{ Variables: Vars }>;
 
 const wantsStream = (c: Ctx) =>
@@ -129,7 +142,7 @@ export function reviewsRoutes(deps: Deps) {
     const system = buildSystem(tools.length > 0);
     const initialPrompt = reviewPrompt(loaded.content, body.instructions ?? "", opts.repo, opts.repoContext);
 
-    const persist = async (text: string) => {
+    const persist = async (r: RunReviewAgentResult) => {
       const [saved] = await deps.db
         .insert(reviews)
         .values({
@@ -137,8 +150,14 @@ export function reviewsRoutes(deps: Deps) {
           documentId: id,
           provider: cfg.provider,
           model: cfg.model,
-          content: text,
+          content: r.text,
           createdBy: email,
+          inputTokens: r.usage?.inputTokens ?? null,
+          outputTokens: r.usage?.outputTokens ?? null,
+          cacheReadTokens: r.usage?.cacheReadInputTokens ?? null,
+          cacheWriteTokens: r.usage?.cacheCreationInputTokens ?? null,
+          toolsUsed: JSON.stringify(r.toolsUsed),
+          truncated: r.truncated,
         })
         .returning();
       return saved!;
@@ -157,7 +176,7 @@ export function reviewsRoutes(deps: Deps) {
             tools,
             onEvent: (e) => stream.writeSSE({ event: e.type, data: e.data }),
           });
-          const saved = await persist(r.text);
+          const saved = await persist(r);
           await stream.writeSSE({
             event: "done",
             data: JSON.stringify({
@@ -167,6 +186,7 @@ export function reviewsRoutes(deps: Deps) {
               repo: opts.repo,
               toolsUsed: r.toolsUsed,
               truncated: r.truncated,
+              usage: usagePayload(r.usage),
             }),
           });
         } catch (e) {
@@ -189,7 +209,7 @@ export function reviewsRoutes(deps: Deps) {
       tools,
       onEvent: () => {},
     });
-    const saved = await persist(r.text);
+    const saved = await persist(r);
     return c.json({
       id: saved.id,
       review: r.text,
@@ -199,6 +219,7 @@ export function reviewsRoutes(deps: Deps) {
       createdByName: await displayNameOf(deps, email),
       toolsUsed: r.toolsUsed,
       truncated: r.truncated,
+      usage: usagePayload(r.usage),
       ...(opts.repo ? { repo: opts.repo } : {}),
     });
   }

@@ -92,6 +92,13 @@ export interface Review {
   content: string;
   createdBy: string;
   createdAt: string;
+  // コスト可観測性（Phase E）。旧レビューや usage 非対応プロバイダでは null。
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
+  toolsUsed: string | null; // JSON 文字列（string[]）
+  truncated: boolean;
 }
 
 // スレッド（アンカー＋非削除コメント同梱）。GET /api/documents/:id/threads。

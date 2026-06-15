@@ -1,4 +1,4 @@
-import type { LlmClient, ToolDef } from "../llm/types";
+import type { LlmClient, LlmUsage, ToolDef } from "../llm/types";
 
 // AI レビューのツール使用ループ（ネイティブ tool use・LangChain 不採用）。
 // ループ論理はプロバイダ非依存（converse が 1 ターンを正規化済みで返す）＝fake で単体テスト可能。
@@ -35,6 +35,24 @@ export interface RunReviewAgentResult {
   text: string;
   toolsUsed: string[];
   truncated: boolean;
+  /** 全ターン合算のトークン使用量。どのターンも usage を返さなければ undefined。 */
+  usage?: LlmUsage;
+}
+
+// 全ターンの usage を合算する累積器。usage を返したターンが 1 つでもあれば値を持つ。
+function makeUsageAccumulator() {
+  let acc: LlmUsage | undefined;
+  return {
+    add(u: LlmUsage | undefined) {
+      if (!u) return;
+      acc ??= { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 };
+      acc.inputTokens += u.inputTokens;
+      acc.outputTokens += u.outputTokens;
+      acc.cacheReadInputTokens += u.cacheReadInputTokens;
+      acc.cacheCreationInputTokens += u.cacheCreationInputTokens;
+    },
+    get: () => acc,
+  };
 }
 
 function describeArg(input: unknown): string {
@@ -62,6 +80,7 @@ export async function runReviewAgent(opts: RunReviewAgentOpts): Promise<RunRevie
   ];
   let full = "";
   const toolsUsed: string[] = [];
+  const usage = makeUsageAccumulator();
   let calls = 0;
   let completed = false;
 
@@ -78,6 +97,7 @@ export async function runReviewAgent(opts: RunReviewAgentOpts): Promise<RunRevie
         void opts.onEvent({ type: "delta", data: t });
       },
     });
+    usage.add(r.usage);
 
     if (r.toolCalls.length === 0) {
       completed = true;
@@ -87,7 +107,7 @@ export async function runReviewAgent(opts: RunReviewAgentOpts): Promise<RunRevie
     const results: { id: string; content: string }[] = [];
     for (const call of r.toolCalls) {
       if (++calls > MAX_TOOL_CALLS) {
-        return { text: full, toolsUsed, truncated: true };
+        return { text: full, toolsUsed, truncated: true, usage: usage.get() };
       }
       await opts.onEvent({ type: "tool", data: JSON.stringify({ name: call.name, arg: call.input }) });
       const impl = registry.get(call.name);
@@ -109,5 +129,5 @@ export async function runReviewAgent(opts: RunReviewAgentOpts): Promise<RunRevie
   }
 
   // 正常完了（completed）以外＝MAX_TURNS 到達でまだツールを要求中＝部分結果として truncated:true（§10/§13）。
-  return { text: full, toolsUsed, truncated: !completed };
+  return { text: full, toolsUsed, truncated: !completed, usage: usage.get() };
 }

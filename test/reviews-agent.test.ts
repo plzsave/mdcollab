@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { eq } from "drizzle-orm";
-import { makeHarness, seedMember, textTurn, toolTurn, type Harness } from "./helpers/harness";
+import { makeHarness, seedMember, textTurn, toolTurn, withUsage, type Harness } from "./helpers/harness";
 import { createGithubClient } from "../src/github/client";
 import * as schema from "../src/db/schema";
 
@@ -252,6 +252,65 @@ describe("AI Review Agent（tool use ループ）", () => {
     expect(toolResult).toContain("重要な仕様はこのキーワードの近くにある"); // スニペットに一致周辺
     expect(toolResult).toContain("…"); // 前後が切り詰められている
     expect(toolResult).not.toContain("前置き".repeat(80)); // 本文を丸ごとは返さない
+  });
+
+  it("コスト計測: 全ターンの usage を合算し応答・reviews 行に保存（Phase E）", async () => {
+    const h = await setupRepo();
+    // 1 ターン目（ツール）と 2 ターン目（完了）でそれぞれ usage を返す。
+    h.llm.script.push(
+      withUsage(toolTurn({ name: "fetch_repo_file", input: { path: "src/x.ts" } }), {
+        inputTokens: 100,
+        outputTokens: 20,
+        cacheReadInputTokens: 80,
+        cacheCreationInputTokens: 10,
+      }),
+      withUsage(textTurn("指摘"), {
+        inputTokens: 50,
+        outputTokens: 30,
+        cacheReadInputTokens: 40,
+        cacheCreationInputTokens: 0,
+      }),
+    );
+
+    const res = await h.req("/api/documents/d1/review-repo", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      usage: { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number };
+    };
+    // 2 ターン合算（列名にマップ）
+    expect(body.usage).toEqual({ inputTokens: 150, outputTokens: 50, cacheReadTokens: 120, cacheWriteTokens: 10 });
+
+    const [row] = await h.db.select().from(schema.reviews).where(eq(schema.reviews.documentId, "d1"));
+    expect(row!.inputTokens).toBe(150);
+    expect(row!.outputTokens).toBe(50);
+    expect(row!.cacheReadTokens).toBe(120);
+    expect(row!.cacheWriteTokens).toBe(10);
+    expect(JSON.parse(row!.toolsUsed!)).toEqual(["fetch_repo_file:src/x.ts"]);
+    expect(row!.truncated).toBe(false);
+  });
+
+  it("コスト計測: usage を返さないプロバイダは usage 省略・列は null", async () => {
+    const h = await setupRepo();
+    h.llm.script.push(textTurn("指摘だけ")); // usage 無し
+
+    const res = await h.req("/api/documents/d1/review", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).usage).toBeUndefined();
+
+    const [row] = await h.db.select().from(schema.reviews).where(eq(schema.reviews.documentId, "d1"));
+    expect(row!.inputTokens).toBeNull();
+    expect(row!.cacheReadTokens).toBeNull();
+    // usage が無くても toolsUsed/truncated は保存される
+    expect(row!.truncated).toBe(false);
+    expect(JSON.parse(row!.toolsUsed!)).toEqual([]);
   });
 
   it("plain review もツール（doc/workspace）を持つ", async () => {

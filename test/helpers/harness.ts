@@ -18,15 +18,22 @@ import type { AppConfig, Deps } from "../../src/env";
 const TEST_SECRET = "test-secret";
 
 // converse 用のスクリプト 1 ターン。text=テキストで完了、tool=ツール呼び出しを要求。
+// usage を付けると converse がそのターンの使用量を返す（合算テスト用）。
 export type ScriptTurn =
-  | { kind: "text"; text: string }
-  | { kind: "tool"; calls: { id?: string; name: string; input: unknown }[] };
+  | { kind: "text"; text: string; usage?: LlmTurnResult["usage"] }
+  | { kind: "tool"; calls: { id?: string; name: string; input: unknown }[]; usage?: LlmTurnResult["usage"] };
 
 export const textTurn = (text: string): ScriptTurn => ({ kind: "text", text });
 export const toolTurn = (...calls: { id?: string; name: string; input: unknown }[]): ScriptTurn => ({
   kind: "tool",
   calls,
 });
+
+// 既存の textTurn/toolTurn に usage を後付けする（toolTurn が可変長引数なので合成で渡す）。
+export const withUsage = (
+  turn: ScriptTurn,
+  usage: NonNullable<LlmTurnResult["usage"]>,
+): ScriptTurn => ({ ...turn, usage });
 
 // messages[0]（user）のテキストブロックを連結（fake のデフォルト応答とアサーション用）。
 function firstUserText(messages: unknown[]): string {
@@ -78,6 +85,7 @@ export function makeFakeLlm(): FakeLlm {
             role: "assistant",
             content: toolCalls.map((c) => ({ type: "tool_use", id: c.id, name: c.name, input: c.input })),
           },
+          usage: turn.usage,
         };
       }
       // text ターン or デフォルト（スクリプト未指定）。デフォルトは単発レビューと等価。
@@ -86,7 +94,12 @@ export function makeFakeLlm(): FakeLlm {
           ? turn.text
           : `REVIEW(${input.provider}/${input.model}): ${firstUserText(input.messages).slice(0, 20)}`;
       input.onDelta?.(text);
-      return { text, toolCalls: [], rawAssistant: { role: "assistant", content: [{ type: "text", text }] } };
+      return {
+        text,
+        toolCalls: [],
+        rawAssistant: { role: "assistant", content: [{ type: "text", text }] },
+        usage: turn?.kind === "text" ? turn.usage : undefined,
+      };
     },
   };
 }

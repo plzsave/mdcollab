@@ -1,5 +1,13 @@
 import { ApiError } from "./client";
 
+// レビュー 1 回のトークン使用量（コスト可観測性）。inputTokens は新規入力（キャッシュ未ヒット分）。
+export interface ReviewUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+}
+
 export interface ReviewDone {
   id: string;
   provider: string;
@@ -7,6 +15,7 @@ export interface ReviewDone {
   repo?: string;
   toolsUsed?: string[];
   truncated?: boolean;
+  usage?: ReviewUsage;
 }
 
 // エージェントが呼んだツール（透明性表示用）。data は reviewAgent の onEvent("tool") に対応。
