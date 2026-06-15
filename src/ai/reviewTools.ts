@@ -1,6 +1,6 @@
 import { and, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
 import type { Deps } from "../env";
-import { comments, documents, threads } from "../db/schema";
+import { comments, documents, documentVersions, threads } from "../db/schema";
 import type { ToolImpl } from "./reviewAgent";
 
 // レビューエージェントのツール工場。ルートが deps / 対象 doc / repo / pat を捕捉して組み立てる
@@ -10,6 +10,10 @@ import type { ToolImpl } from "./reviewAgent";
 const MAX_DOCS = 20; // search_docs の返却上限（トークン爆発防止）
 const MAX_THREADS = 50; // get_doc_threads の返却上限
 const SNIPPET_RADIUS = 100; // 一致箇所の前後文字数（スニペット長を固定＝トークン爆発防止）
+const MAX_DOC_CHARS = 32 * 1024; // read_doc の全文返却上限（fetch_repo_file と同じ 32KB 目安）
+const MAX_DIFF_LINES = 1000; // get_revision_diff の各版比較行数上限（LCS の O(n*m) を抑える）
+const MAX_DIFF_CHARS = 16 * 1024; // 差分の返却文字数上限（トークン爆発防止）
+const DIFF_CONTEXT = 2; // 差分の変更行まわりに残す文脈行数
 
 // body 中の query 一致箇所の前後を抜き出した 1 行スニペットを返す（無一致は空文字）。
 // 本文を丸ごと返すとトークンが爆発するため、必ず一致周辺だけに切り詰める。
@@ -26,6 +30,74 @@ function makeSnippet(body: string | null, query: string): string {
 function strInput(input: unknown, key: string): string | null {
   const v = (input as Record<string, unknown> | null)?.[key];
   return typeof v === "string" ? v : null;
+}
+
+// 前版→現版の行単位 diff（LCS）。各版を MAX_DIFF_LINES 行に切り詰めてから比較し、
+// 変更行のまわり DIFF_CONTEXT 行だけ残して未変更の長い連続は「…」に畳む（トークン爆発防止）。
+function lineDiff(oldText: string, newText: string): string {
+  const cap = (s: string) => {
+    const lines = s.split("\n");
+    return { lines: lines.slice(0, MAX_DIFF_LINES), truncated: lines.length > MAX_DIFF_LINES };
+  };
+  const a = cap(oldText);
+  const b = cap(newText);
+  const x = a.lines;
+  const y = b.lines;
+  const n = x.length;
+  const m = y.length;
+
+  // LCS 長テーブル（末尾から）。
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i]![j] = x[i] === y[j] ? dp[i + 1]![j + 1]! + 1 : Math.max(dp[i + 1]![j]!, dp[i]![j + 1]!);
+    }
+  }
+
+  // タグ付き行列（" "=文脈 / "-"=削除 / "+"=追加）を復元。
+  const tagged: { tag: " " | "-" | "+"; line: string }[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (x[i] === y[j]) {
+      tagged.push({ tag: " ", line: x[i]! });
+      i++;
+      j++;
+    } else if (dp[i + 1]![j]! >= dp[i]![j + 1]!) {
+      tagged.push({ tag: "-", line: x[i++]! });
+    } else {
+      tagged.push({ tag: "+", line: y[j++]! });
+    }
+  }
+  while (i < n) tagged.push({ tag: "-", line: x[i++]! });
+  while (j < m) tagged.push({ tag: "+", line: y[j++]! });
+
+  if (!tagged.some((t) => t.tag !== " ")) return "（前版との差分はありません）";
+
+  // 変更行の周辺だけ残す（未変更の長い連続は畳む）。
+  const keep = new Array(tagged.length).fill(false);
+  tagged.forEach((t, idx) => {
+    if (t.tag === " ") return;
+    for (let k = idx - DIFF_CONTEXT; k <= idx + DIFF_CONTEXT; k++) {
+      if (k >= 0 && k < tagged.length) keep[k] = true;
+    }
+  });
+  const lines: string[] = [];
+  let gap = false;
+  tagged.forEach((t, idx) => {
+    if (keep[idx]) {
+      lines.push(`${t.tag} ${t.line}`);
+      gap = false;
+    } else if (!gap) {
+      lines.push("…");
+      gap = true;
+    }
+  });
+  if (a.truncated || b.truncated) lines.push(`（…比較は各版先頭 ${MAX_DIFF_LINES} 行まで）`);
+
+  let text = lines.join("\n");
+  if (text.length > MAX_DIFF_CHARS) text = `${text.slice(0, MAX_DIFF_CHARS)}\n（…差分を切り詰め）`;
+  return text;
 }
 
 // fetch_repo_file: 参照リポジトリ内の単一ファイル（固定 repo・PAT）。Phase A から移設。
@@ -157,6 +229,70 @@ export function searchDocsTool(deps: Deps, currentDocId: string): ToolImpl {
           .join("\n");
       } catch (e) {
         return `（文書検索でエラー: ${e instanceof Error ? e.message : "unknown"}）`;
+      }
+    },
+  };
+}
+
+// read_doc: ワークスペース内の他文書の全文（members 限定・ルートが認可済み）。
+// search_docs のスニペットでは足りず全文確認したいときに。サイズ上限つき（トークン爆発防止）。
+export function readDocTool(deps: Deps): ToolImpl {
+  return {
+    def: {
+      name: "read_doc",
+      description:
+        "ワークスペース内の文書の全文を取得する。search_docs が返したヒット文書を、スニペットでは足りず全文で確認したいときに id を指定して呼ぶ。",
+      inputSchema: {
+        type: "object",
+        properties: { id: { type: "string", description: "search_docs が返した文書 id" } },
+        required: ["id"],
+      },
+    },
+    async execute(input) {
+      const id = strInput(input, "id");
+      if (!id) return "（不正な入力: id を文字列で指定してください）";
+      try {
+        const [doc] = await deps.db.select().from(documents).where(eq(documents.id, id)).limit(1);
+        if (!doc) return `（id: ${id} の文書は見つかりません）`;
+        const ref = doc.storageKey ?? doc.driveFileId;
+        const content = ref ? await deps.store.get(ref) : "";
+        const capped =
+          content.length > MAX_DOC_CHARS ? `${content.slice(0, MAX_DOC_CHARS)}\n（…32KB で切り詰め）` : content;
+        return `# ${doc.title} (id: ${doc.id})\n\n${capped}`;
+      } catch (e) {
+        return `（文書取得でエラー: ${e instanceof Error ? e.message : "unknown"}）`;
+      }
+    },
+  };
+}
+
+// get_revision_diff: レビュー中の文書の前版→現版の差分（当該 doc 限定）。
+// 版ごとに storageKey を持つ documentVersions から直近 2 版を読み行 diff を返す。
+export function getRevisionDiffTool(deps: Deps, documentId: string): ToolImpl {
+  return {
+    def: {
+      name: "get_revision_diff",
+      description:
+        "レビュー中の文書の、前版から現版への変更（差分）を取得する。『前回からの変更だけ見て』のように直近の修正点に絞ってレビューしたいときに呼ぶ。",
+      inputSchema: { type: "object", properties: {}, required: [] },
+    },
+    async execute() {
+      try {
+        const vers = await deps.db
+          .select()
+          .from(documentVersions)
+          .where(eq(documentVersions.documentId, documentId))
+          .orderBy(desc(documentVersions.version))
+          .limit(2);
+        if (vers.length < 2) return "（前版がありません＝差分を取得できません）";
+        const read = async (v: (typeof vers)[number]) => {
+          const ref = v.storageKey ?? v.driveFileId;
+          return ref ? deps.store.get(ref) : "";
+        };
+        const [curText, prevText] = await Promise.all([read(vers[0]!), read(vers[1]!)]);
+        return lineDiff(prevText, curText);
+      } catch (e) {
+        return `（差分取得でエラー: ${e instanceof Error ? e.message : "unknown"}）`;
       }
     },
   };

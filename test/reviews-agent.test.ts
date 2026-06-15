@@ -159,7 +159,7 @@ describe("AI Review Agent（tool use ループ）", () => {
     expect(res.status).toBe(200);
     // doc/workspace ツールは付くが、PAT 無しなので repo ツール（fetch_repo_file/list_repo_tree）は付かない
     const toolNames = h.llm.converseCalls.at(-1)!.tools.map((t) => t.name);
-    expect(toolNames).toEqual(["get_doc_threads", "search_docs"]);
+    expect(toolNames).toEqual(["get_doc_threads", "search_docs", "read_doc", "get_revision_diff"]);
     expect(h.github.fileCalls).toHaveLength(0);
     expect(h.github.treeCalls).toHaveLength(0);
   });
@@ -315,6 +315,72 @@ describe("AI Review Agent（tool use ループ）", () => {
     expect(JSON.parse(row!.toolsUsed!)).toEqual([]);
   });
 
+  it("read_doc: 指定 id の文書全文を tool_result に積む（id 引数）", async () => {
+    const h = await setupRepo();
+    const k = await h.store.put("d2", 1, "# 関連メモ\n詳細な本文をここに全部記載");
+    await h.db
+      .insert(schema.documents)
+      .values({ id: "d2", title: "関連メモ", storageKey: k, version: 1, createdBy: "u@example.com" });
+
+    h.llm.script.push(toolTurn({ name: "read_doc", input: { id: "d2" } }), textTurn("全文確認"));
+    const res = await h.req("/api/documents/d1/review", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { toolsUsed: string[] };
+    expect(body.toolsUsed).toEqual(["read_doc:d2"]); // describeArg が id を表示
+    const messages = JSON.stringify(h.llm.converseCalls.at(-1)!.messages);
+    expect(messages).toContain("詳細な本文をここに全部記載");
+    expect(messages).toContain("id: d2");
+  });
+
+  it("read_doc: 未知 id はメモを返す（never throw）", async () => {
+    const h = await setupRepo();
+    h.llm.script.push(toolTurn({ name: "read_doc", input: { id: "nope" } }), textTurn("ok"));
+    const res = await h.req("/api/documents/d1/review", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    expect(JSON.stringify(h.llm.converseCalls.at(-1)!.messages)).toContain("見つかりません");
+  });
+
+  it("get_revision_diff: 前版→現版の行差分を tool_result に積む", async () => {
+    const h = await setupRepo();
+    const k1 = await h.store.put("d1", 1, "line A\nline B\nline C");
+    const k2 = await h.store.put("d1", 2, "line A\nline B2\nline C");
+    await h.db.insert(schema.documentVersions).values([
+      { documentId: "d1", version: 1, storageKey: k1, createdBy: "u@example.com" },
+      { documentId: "d1", version: 2, storageKey: k2, createdBy: "u@example.com" },
+    ]);
+
+    h.llm.script.push(toolTurn({ name: "get_revision_diff", input: {} }), textTurn("差分確認"));
+    const res = await h.req("/api/documents/d1/review", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const messages = JSON.stringify(h.llm.converseCalls.at(-1)!.messages);
+    expect(messages).toContain("- line B"); // 旧行が削除として出る
+    expect(messages).toContain("+ line B2"); // 新行が追加として出る
+  });
+
+  it("get_revision_diff: 版が1つ以下なら差分なしメモ（setupRepo は版履歴を作らない）", async () => {
+    const h = await setupRepo();
+    h.llm.script.push(toolTurn({ name: "get_revision_diff", input: {} }), textTurn("ok"));
+    const res = await h.req("/api/documents/d1/review", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    expect(JSON.stringify(h.llm.converseCalls.at(-1)!.messages)).toContain("前版がありません");
+  });
+
   it("plain review もツール（doc/workspace）を持つ", async () => {
     const h = await setupRepo();
     const res = await h.req("/api/documents/d1/review", {
@@ -324,7 +390,7 @@ describe("AI Review Agent（tool use ループ）", () => {
     });
     expect(res.status).toBe(200);
     const toolNames = h.llm.converseCalls.at(-1)!.tools.map((t) => t.name);
-    expect(toolNames).toEqual(["get_doc_threads", "search_docs"]);
+    expect(toolNames).toEqual(["get_doc_threads", "search_docs", "read_doc", "get_revision_diff"]);
   });
 });
 
