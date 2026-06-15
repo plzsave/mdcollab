@@ -38,6 +38,28 @@ describe("AI メトリクス (/api/ai/metrics)", () => {
     expect(body.aiThreads).toMatchObject({ total: 2, open: 1, resolved: 1, acceptancePct: 50 });
   });
 
+  it("owner: lifetime（追記ログ）から採用率・無視率を出す", async () => {
+    const h = await makeHarness();
+    await seedMember(h, "o@example.com", "owner");
+    await h.db.insert(schema.aiReviewEvents).values([
+      { id: "e1", documentId: "d1", actor: "o@example.com", action: "threads_created", count: 10 },
+      { id: "e2", documentId: "d1", actor: "o@example.com", action: "thread_resolved", count: 1 },
+      { id: "e3", documentId: "d1", actor: "o@example.com", action: "thread_resolved", count: 1 },
+      { id: "e4", documentId: "d1", actor: "o@example.com", action: "threads_superseded", count: 3 },
+    ]);
+    const res = await h.req("/api/ai/metrics", { as: "o@example.com" });
+    const body = (await res.json()) as {
+      lifetime: { created: number; resolved: number; superseded: number; acceptancePct: number; ignoredPct: number };
+    };
+    expect(body.lifetime).toMatchObject({
+      created: 10,
+      resolved: 2,
+      superseded: 3,
+      acceptancePct: 20, // 2/10
+      ignoredPct: 30, // 3/10
+    });
+  });
+
   it("member は 403（owner 限定）", async () => {
     const h = await makeHarness();
     await seedMember(h, "m@example.com", "member");
