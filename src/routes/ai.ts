@@ -5,6 +5,7 @@ import { requireMember, requireOwner, type Vars } from "../auth/middleware";
 import { aiKeys, aiReviewEvents, aiSettings, reviews, revisions, threads } from "../db/schema";
 import { encryptSecret, decryptSecret } from "../crypto";
 import { loadAiSettings, GITHUB_PREFIX } from "../ai/settings";
+import { AI_THREAD_AUTHOR } from "../ai/events";
 
 // AI 実行のコスト/利用を content-free（本文を含めず集計値のみ）に要約する（運用の可視化・Tier 0）。
 // reviews/revisions の usage 列（Phase E/H）と、ai-review スレッドの反応を既存テーブルから読むだけ。
@@ -221,7 +222,7 @@ export function aiRoutes(deps: Deps) {
     const aiThreadRows = await deps.db
       .select({ status: threads.status })
       .from(threads)
-      .where(eq(threads.createdBy, "ai-review"));
+      .where(eq(threads.createdBy, AI_THREAD_AUTHOR));
 
     const open = aiThreadRows.filter((t) => t.status === "open").length;
     const resolved = aiThreadRows.filter((t) => t.status === "resolved").length;
