@@ -3,8 +3,12 @@
 対象: **R2 バケット**と **Hyperdrive 設定**のみ（Worker は wrangler のまま）。
 ツール: OpenTofu（`tofu`。`~/.local/bin/tofu` に導入済み）。
 
-> 秘密（API トークン・Neon パスワード）は**自分の端末で**設定・実行してください
-> （会話ログに残さないため）。
+> 秘密はリポジトリに置かず、direnv と tfvars 経由で**自動ロード**する（どちらも gitignore 済み）:
+> - `CLOUDFLARE_API_TOKEN` → このディレクトリの `.env`（`.envrc` の `dotenv` が cd 時に読む）
+> - `neon_password` / `account_id` / `zone_id` / `r2_bucket_name` / `neon_host` → `terraform.tfvars`（tofu が自動で読む）
+>
+> 初回だけこのディレクトリで `direnv allow`。以後はここへ cd するだけで export 不要・tofu が通る
+> （ディレクトリ名を変えた直後も `direnv allow` を打ち直すこと）。
 
 ## 0. 前提
 
@@ -23,23 +27,24 @@ My Profile → API Tokens → Create Token → **Custom token**：
   - Account · **Hyperdrive** · Edit
   - Account · **Account Settings** · Read
 - Account Resources: Include · 自分のアカウント
-- 作成後、トークン文字列をコピー。
+- 作成後、トークン文字列をこのディレクトリの `.env` に置く（`.envrc` の `dotenv` が自動ロード・gitignore 済み）:
 
 ```bash
-export CLOUDFLARE_API_TOKEN='＜作ったトークン＞'
+# infra/envs/mdcollab-cloudflare/.env
+CLOUDFLARE_API_TOKEN=＜作ったトークン＞
 ```
 
-## 2. Neon パスワードを渡す
+初回のみこのディレクトリで `direnv allow`。以後は cd するだけで export される。
 
-Hyperdrive の origin に使っている Neon 接続パスワード（作成時の `postgres://USER:＜ここ＞@...`）。
+## 2. terraform.tfvars に値を入れる
 
-```bash
-export TF_VAR_neon_password='＜Neon のパスワード＞'
-# もしくは terraform.tfvars.example をコピーして terraform.tfvars に記入（gitignore 済み）
-```
+`terraform.tfvars.example` をコピーして `terraform.tfvars`（gitignore 済み）に実値を記入する。
+tofu が自動で読むので export は不要:
 
-> 個人のアカウント値（`account_id` / `r2_bucket_name` / `neon_host` 等）も `terraform.tfvars`
-> に入れる（リポジトリにはプレースホルダの `.example` だけ。実値はコミットしない）。
+- `neon_password` … Hyperdrive の origin に使っている Neon 接続パスワード（`postgres://USER:＜ここ＞@...`）
+- `account_id` / `r2_bucket_name` / `neon_host` / `zone_id` … 自分のアカウント値
+
+> リポジトリにはプレースホルダの `.example` だけが入る（実値はコミットしない）。
 
 ## 3. init（未実施なら）
 

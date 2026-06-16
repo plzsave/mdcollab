@@ -15,5 +15,6 @@ terraform {
   }
 }
 
-# api_token は環境変数 CLOUDFLARE_API_TOKEN から読む（リポジトリには置かない）。
+# api_token は環境変数 CLOUDFLARE_API_TOKEN から読む（このディレクトリの .env を .envrc の dotenv が
+# 自動 export。実値はリポジトリに置かない＝.env は gitignore 済み）。
 provider "cloudflare" {}
