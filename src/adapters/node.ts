@@ -8,7 +8,7 @@ import { createWebClient } from "../web/client";
 import { lookup } from "node:dns/promises";
 import type { AppConfig } from "../env";
 
-// ローカル開発 / 職場 AWS(Fargate/App Runner)用 Node エントリ。
+// ローカル開発 / AWS(Fargate/App Runner) 等の Node エントリ。
 // Lambda へ載せる場合は同じ createApp を Lambda アダプタ(hono/aws-lambda)で包む。
 function required(name: string): string {
   const v = process.env[name];

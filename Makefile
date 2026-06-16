@@ -1,4 +1,4 @@
-# デプロイ実体は repo スクリプトに集約し、CI エンジン(個人=GitHub Actions / 職場=CodePipeline)は
+# デプロイ実体は repo スクリプトに集約し、CI エンジン(GitHub Actions / CodePipeline 等)は
 # 「これを呼ぶだけ」にする＝CI エンジンを差し替え可能に（移行計画 §5.2）。
 
 .PHONY: install typecheck test check dev dev-up serve up down logs migrate seed deploy-cf deploy-aws

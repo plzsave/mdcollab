@@ -1,6 +1,6 @@
 # Cloudflare 手動デプロイ手順（軽い入り方）
 
-本番（個人 Cloudflare）を **wrangler 手動デプロイ** で最短起動するための手順。
+Cloudflare への本番デプロイを **wrangler 手動デプロイ** で最短起動するための手順。
 Terraform / CI はまだ使わず、まず本番 `/health` を通すことを目標にする。
 ここで作った R2 / Hyperdrive は、後で `terraform import` で一括管理へ移せる（作り直し不要）。
 
@@ -12,7 +12,7 @@ Terraform / CI はまだ使わず、まず本番 `/health` を通すことを目
 
 | # | 用意するもの | 取得物 |
 |---|---|---|
-| 1 | Neon プロジェクト | Postgres 接続文字列 `postgres://...` |
+| 1 | マネージド Postgres（例: Neon） | Postgres 接続文字列 `postgres://...` |
 | 2 | Cloudflare アカウント | Account ID |
 | 3 | Cloudflare API トークン | 権限: Workers Scripts / R2 / Hyperdrive 編集 |
 | 4 | R2 有効化 | Access Key ID / Secret（S3互換） |
@@ -45,7 +45,7 @@ https://<ACCOUNT_ID>.r2.cloudflarestorage.com
 
 ---
 
-## 2. Hyperdrive を作る（→ Neon）
+## 2. Hyperdrive を作る（→ Postgres）
 
 ```bash
 npx wrangler hyperdrive create mdcollab-neon \
@@ -81,7 +81,7 @@ Workers サブドメインに書き換える（例 `https://mdcollab-api.<you>.w
 
 ---
 
-## 4. スキーマを Neon に適用
+## 4. スキーマを Postgres に適用
 
 **本番 migrate は CI の承認付きジョブで実行する**（#23）。ローカルからの本番直 migrate は非推奨
 （認証情報の分散・監査ログ欠如・属人的な順序運用を避けるため）。
@@ -90,7 +90,7 @@ Workers サブドメインに書き換える（例 `https://mdcollab-api.<you>.w
 
 - GitHub → Settings → Environments → `production` を作成
   - **Required reviewers** を設定（実行前の承認ゲート）
-  - Secret `DATABASE_URL` に本番 Neon 接続文字列（`postgres://…?sslmode=require`）を登録
+  - Secret `DATABASE_URL` に本番 Postgres 接続文字列（`postgres://…?sslmode=require`）を登録
 
 実行:
 

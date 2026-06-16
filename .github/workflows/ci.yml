@@ -1,6 +1,6 @@
 name: ci
 
-# 個人(Cloudflare)側の CI/CD。
+# Cloudflare 側の CI/CD。
 #   check : 型チェック + テスト + web ビルド（PR と main の両方で実行＝品質ゲート）
 #   deploy: main への push のみ。web をビルドして Worker(+[assets]) をデプロイ
 # デプロイ実体は scripts/deploy-cf.sh（ローカルでも同じものを使える）。

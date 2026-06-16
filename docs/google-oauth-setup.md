@@ -7,8 +7,8 @@
 
 1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクトを作成 or 選択。
 2. **APIs & Services → OAuth consent screen**:
-   - 個人 Gmail で試す → **External**。後述のテストユーザーに自分を追加。
-   - 職場 Workspace → **Internal**（同一ドメインのみ・審査不要）。
+   - 個人の Google アカウントで試す → **External**。後述のテストユーザーに自分を追加。
+   - Workspace アカウント → **Internal**（同一ドメインのみ・審査不要）。
    - スコープは `openid` / `email` / `profile` の3つだけ（非機微・Google 審査不要）。
 
 ## 2. OAuth クライアント ID
@@ -29,7 +29,7 @@
 ```
 GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=xxxxx
-# 職場ドメインに絞るなら:
+# 特定のドメインに絞るなら:
 # ALLOWED_DOMAIN=your-workspace-domain.com
 DEV_AUTH=0   # 本物の OAuth を試すときは抜け道を切る
 ```
@@ -42,6 +42,6 @@ DEV_AUTH=0   # 本物の OAuth を試すときは抜け道を切る
 
 ## デプロイ時
 
-- 個人(CF) / 職場(AWS) の各 `BASE_URL` に対応する redirect URI を**それぞれ追加**する
+- 各環境（例: Cloudflare / AWS）の `BASE_URL` に対応する redirect URI を**それぞれ追加**する
   （例: `https://mdcollab.example.workers.dev/api/auth/callback`）。
 - Client Secret はリポジトリに置かず、各プラットフォームのシークレット管理へ（§5.2）。

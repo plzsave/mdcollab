@@ -1,4 +1,4 @@
-# 職場・次点: GCP（Cloud Run + GCS + Cloud SQL Postgres）
+# GCP デプロイ: Cloud Run + GCS + Cloud SQL Postgres
 # state backend: GCS。(B)Drive 温存ならこの env が有利（§4.1）。
 
 terraform {

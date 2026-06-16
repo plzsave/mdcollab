@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 職場(AWS)デプロイ。CodePipeline/CodeBuild の buildspec から呼ばれるが、ロジックはここに集約（§5.2）。
+# AWS デプロイ。CodePipeline/CodeBuild の buildspec から呼ばれるが、ロジックはここに集約（§5.2）。
 # CI エンジンが変わってもこのスクリプトは不変＝差し替え可能なシーム。
 set -euo pipefail
 cd "$(dirname "$0")/.."

@@ -1,5 +1,5 @@
-# 個人デプロイ（Cloudflare）のうち「状態を持つインフラ」だけを Terraform/OpenTofu 管理。
-#   - 対象: R2 バケット / Hyperdrive 設定（→ Neon）
+# Cloudflare デプロイのうち「状態を持つインフラ」だけを Terraform/OpenTofu 管理。
+#   - 対象: R2 バケット / Hyperdrive 設定（→ Postgres）
 #   - 対象外: Worker のスクリプト・バインディングは wrangler.toml + `wrangler deploy` のまま
 #     （wrangler.toml 自体が Worker の IaC。TF に入れると wrangler deploy と二重管理になるため）
 # state backend: まずローカル（terraform.tfstate）。必要になれば R2(S3互換) backend へ移行可。
