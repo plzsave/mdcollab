@@ -2,7 +2,7 @@ import type { DocumentStore } from "./types";
 
 // (B)ハイブリッド: 本体を Google Drive に残置。ref = drive_file_id。
 // Phase 0 で A/B を確定してから実装（Drive API: files.get?alt=media / files.update）。
-// 職場は業務 md が Workspace 管理のため温存に実利あり（§6.0）。
+// Workspace 管理下の md を温存したい場合に実利あり（§6.0）。
 export interface DriveConfig {
   backend: "drive";
   // 認証(サービスアカウント/ドメイン委任 or per-user OAuth) は Phase 0 で確定

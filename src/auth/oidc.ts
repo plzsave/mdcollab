@@ -1,7 +1,7 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
-// 自前 Google OIDC（個人・職場とも Workspace で identity が立つため全ホスティング共通・§7）。
-// Cloudflare Access は採らない（職場で剥がせないロックインのため）。
+// 自前 Google OIDC（Workspace の identity を使うため全ホスティング共通・§7）。
+// Cloudflare Access は採らない（ホスティングに剥がせないロックインを作らないため）。
 const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
 const GOOGLE_ISS = "https://accounts.google.com";

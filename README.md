@@ -2,7 +2,7 @@
 
 Markdown 共同編集 + コメントスレッド + AI レビュー。GAS 版 `md-collab` の脱 GAS 後継。
 
-**ポータブル一本化**: Web標準コア（Hono）を1本書き、個人は Cloudflare、職場は AWS にデプロイ。
+**ポータブル一本化**: Web標準コア（Hono）を1本書き、Cloudflare / AWS / GCP のいずれにもデプロイできる。
 差は **アダプタ層（DB / 本体ストア / 認証 / 非同期 / CI）だけ**。設計の根拠は別リポの計画書
 （`md-collab-migration-plan.md`）と API 契約（`mdcollab-api-inventory.md`）を参照。
 
@@ -15,13 +15,13 @@ Markdown 共同編集 + コメントスレッド + AI レビュー。GAS 版 `md
 | 層 | 採用 | 備考 |
 |---|---|---|
 | API | Hono | Web標準。Workers/Node/Lambda 共通 |
-| DB | Postgres + Drizzle | 個人=Neon(Hyperdrive) / 職場=RDS。`prepare:false` |
+| DB | Postgres + Drizzle | Hyperdrive 経由の任意の Postgres。`prepare:false` |
 | 本体ストア | `DocumentStore` I/F | `S3Storage`(R2/S3/GCS, aws4fetch) を採用。`DriveStorage` は退役（方針A=全移行で R2 のみ・stub 残置） |
 | フロント | React 19 + Vite + TanStack Router/Query + Tailwind v4 | SPA（`web/`）。Worker の `[assets]` で同居配信 |
 | AI | anthropic / openai | `complete`/`stream` ＋ tool use ループ（`converse`）。レビューはエージェント化済み |
 | 認証 | 自前 Google OIDC | jose。Cloudflare Access は不採用 |
-| IaC | Terraform / OpenTofu | `infra/modules` + `infra/envs/mdcollab-{cf-personal,aws-workplace,gcp}`。個人は R2/Hyperdrive を import 済み |
-| CI | 個人=GitHub Actions / 職場=CodePipeline(後回し) | デプロイ実体は `scripts/` に集約。main push で自動デプロイ |
+| IaC | Terraform / OpenTofu | `infra/modules` + `infra/envs/mdcollab-{cf-personal,aws-workplace,gcp}`。状態を持つ R2/Hyperdrive 等を管理 |
+| CI | GitHub Actions | デプロイ実体は `scripts/` に集約。main push で自動デプロイ |
 
 ## 構成
 

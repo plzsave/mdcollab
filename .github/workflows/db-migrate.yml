@@ -1,13 +1,13 @@
 name: db-migrate
 
 # 本番 DB マイグレーションを CI の手動承認ジョブで実行する（#23）。
-# 目的: ローカルから本番 Neon への直 migrate を廃止し、認証情報の分散と
+# 目的: ローカルから本番 Postgres への直 migrate を廃止し、認証情報の分散と
 #       監査ログ欠如・属人的な順序運用を解消する。
 #
 # 前提（GitHub 側の設定。ワークフローファイルだけでは完結しない）:
 #   Settings → Environments → "production" を作成し、
 #     - Required reviewers を設定（= 実行前に承認ゲートがかかる）
-#     - Secret: DATABASE_URL（本番 Neon の接続文字列）を登録
+#     - Secret: DATABASE_URL（本番 Postgres の接続文字列）を登録
 #   ※ 本番接続情報はこの Environment Secret にのみ置き、各自のローカルには置かない。
 #
 # 使い方: Actions → db-migrate → "Run workflow" で confirm に "migrate" と入力 → 承認 → 実行。

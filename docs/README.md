@@ -8,7 +8,7 @@ mdcollab のドキュメント一覧。プロジェクト概要は [../README.md
 |---|---|
 | [local-dev.md](local-dev.md) | ローカル実起動（docker-compose で Postgres + S3互換、`DEV_AUTH` の dev ログイン） |
 | [google-oauth-setup.md](google-oauth-setup.md) | 本物の Google OIDC ログインを試すための OAuth クライアント設定 |
-| [cloudflare-deploy.md](cloudflare-deploy.md) | Cloudflare（Workers + Hyperdrive→Neon + R2）への本番デプロイ手順 |
+| [cloudflare-deploy.md](cloudflare-deploy.md) | Cloudflare（Workers + Hyperdrive(→Postgres) + R2）への本番デプロイ手順 |
 | [custom-domain-waf-ratelimit.md](custom-domain-waf-ratelimit.md) | 独自ドメイン移行 + WAF レート制限（ゾーン単位）の設定 |
 | [../infra/envs/mdcollab-cf-personal/IMPORT.md](../infra/envs/mdcollab-cf-personal/IMPORT.md) | Terraform/OpenTofu で R2/Hyperdrive を import 管理する手順 |
 

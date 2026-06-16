@@ -1,4 +1,4 @@
-# 職場デプロイ: AWS（Lambda/Fargate + S3 + RDS Postgres t4g.micro）
+# AWS デプロイ: Lambda/Fargate + S3 + RDS Postgres t4g.micro
 # state backend: S3 + DynamoDB ロック（標準）。CI=CodePipeline/CodeBuild（§5.2）。
 
 terraform {

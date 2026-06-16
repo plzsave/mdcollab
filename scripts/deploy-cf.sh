@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 個人(Cloudflare)デプロイの実体。GitHub Actions / ローカルの両方から呼べる単一の入口（§5.2）。
+# Cloudflare デプロイの実体。GitHub Actions / ローカルの両方から呼べる単一の入口（§5.2）。
 #   - web(SPA) をビルドして web/dist を作り、wrangler で Worker ＋ [assets] をデプロイ
 #   - 認証は CLOUDFLARE_API_TOKEN（CI が注入 / ローカルは wrangler login でも可）
 # 方針:

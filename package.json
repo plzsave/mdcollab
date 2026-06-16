@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Markdown collaborative docs + comment threads + AI review (脱 GAS 後継). Portable Hono core: Cloudflare(個人) / AWS(職場) / GCP.",
+  "description": "Markdown collaborative docs + comment threads + AI review (脱 GAS 後継). Portable Hono core: Cloudflare / AWS / GCP.",
   "scripts": {
     "dev": "bun run src/adapters/node.ts",
     "typecheck": "tsc --noEmit",

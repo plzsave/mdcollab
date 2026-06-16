@@ -6,7 +6,7 @@ import { createGithubClient } from "../github/client";
 import { createWebClient } from "../web/client";
 import type { AppConfig } from "../env";
 
-// 個人デプロイ: Cloudflare Workers + Hyperdrive(→Neon) + R2。
+// Cloudflare デプロイ: Workers + Hyperdrive(→Postgres) + R2。
 // 一番制約のキツい Workers に合わせて書く＝緩い Lambda/Cloud Run へ自動で乗る（§5.1）。
 export interface WorkerEnv {
   HYPERDRIVE: { connectionString: string };

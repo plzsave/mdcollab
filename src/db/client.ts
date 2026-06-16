@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 
-// postgres.js + Drizzle。Workers(Hyperdrive 経由 Neon) / Node / Lambda で同一。
+// postgres.js + Drizzle。Workers(Hyperdrive 経由の Postgres) / Node / Lambda で同一。
 // prepare:false は Hyperdrive / pgbouncer(transaction pooling) との互換のため。
 // fetch_types:false / max は Cloudflare Hyperdrive 公式例の推奨（#46）:
 //   - fetch_types:false … 既定(true)は初回接続時に型(OID)情報を取りに行く追加往復を1回入れる。

@@ -83,4 +83,4 @@ import は「既存を Terraform 管理下に置く」だけ。`apply` で新規
 ## state について
 
 いまは**ローカル state**（`terraform.tfstate`・gitignore 済み）。チーム共有や CI で使うなら
-R2(S3互換) backend へ移行する（`main.tf` のコメント参照）。個人運用なら当面ローカルで可。
+R2(S3互換) backend へ移行する（`main.tf` のコメント参照）。小規模運用なら当面ローカルで可。
