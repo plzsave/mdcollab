@@ -292,11 +292,16 @@ export function documentsRoutes(deps: Deps) {
   });
 
   // DELETE /api/documents/:id ≈ deleteDocument。子レコード→本体ストアもまとめて掃除。
+  // 唯一の不可逆操作なので owner ゲートを敷く（#48）: 作成者本人 or owner ロールのみ許可。
+  // 他の read/update はワークスペース フラット認可（members 全員可）のまま。
   app.delete("/:id", async (c) => {
     const id = c.req.param("id");
     const rows = await deps.db.select().from(documents).where(eq(documents.id, id)).limit(1);
     const doc = rows[0];
     if (!doc) return c.json({ error: { code: "NOT_FOUND", message: "document not found" } }, 404);
+    if (doc.createdBy !== c.get("email") && c.get("role") !== "owner") {
+      return c.json({ error: { code: "FORBIDDEN", message: "creator or owner only" } }, 403);
+    }
 
     // 削除前にストアから消すべき ref を集める（版履歴の各版＋現行）。
     const vers = await deps.db

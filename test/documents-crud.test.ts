@@ -166,6 +166,30 @@ describe("DELETE /api/documents/:id", () => {
       (await h.req("/api/documents/none", { as: "u@example.com", method: "DELETE" })).status,
     ).toBe(404);
   });
+
+  it("作成者でも owner でもない member の削除は 403（文書は残る）", async () => {
+    const h = await asMember(); // u@example.com (member) が作成者
+    await seedMember(h, "other@example.com", "member");
+    const doc = (await (await createDoc(h, { title: "T", content: "# x" })).json()) as { id: string };
+
+    const del = await h.req(`/api/documents/${doc.id}`, {
+      as: "other@example.com",
+      method: "DELETE",
+    });
+    expect(del.status).toBe(403);
+    // 文書は消えていない（u 本人なら GET 200）
+    expect((await h.req(`/api/documents/${doc.id}`, { as: "u@example.com" })).status).toBe(200);
+  });
+
+  it("owner は他人が作成した文書を削除できる", async () => {
+    const h = await asMember(); // u@example.com (member) が作成者
+    await seedMember(h, "boss@example.com", "owner");
+    const doc = (await (await createDoc(h, { title: "T", content: "# x" })).json()) as { id: string };
+
+    const del = await h.req(`/api/documents/${doc.id}`, { as: "boss@example.com", method: "DELETE" });
+    expect(del.status).toBe(200);
+    expect((await h.req(`/api/documents/${doc.id}`, { as: "u@example.com" })).status).toBe(404);
+  });
 });
 
 describe("GET /api/documents/:id?include=threads,revision（バンドル）", () => {
