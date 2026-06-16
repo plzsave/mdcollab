@@ -32,7 +32,7 @@ workers.dev URL を直接叩いて WAF を迂回できる。**最終的に入口
 
 ## IaC 管理境界（この変更で何がどこに入るか）
 
-既存方針（`infra/envs/mdcollab-cf-personal/main.tf` 冒頭）を踏襲する。
+既存方針（`infra/envs/mdcollab-cloudflare/main.tf` 冒頭）を踏襲する。
 **状態を持つインフラは Terraform、Worker のスクリプト・バインディング・ルートは wrangler.toml が IaC。**
 
 | 項目 | IaC の置き場所 | 反映コマンド |
@@ -132,7 +132,7 @@ Workers & Pages → `mdcollab-api` → Settings → Domains & Routes →
 
 ## 4. WAF レート制限ルールを作成（Terraform `cloudflare_ruleset`・ゾーン側・正確）
 
-既存の infra env（`infra/envs/mdcollab-cf-personal/`）に**ゾーン scope のルールセット**を追加する。
+既存の infra env（`infra/envs/mdcollab-cloudflare/`）に**ゾーン scope のルールセット**を追加する。
 ゾーン本体は import 不要で、`zone_id` を変数で渡すだけ。**雛形は配置済み**（`variables.tf` の
 `zone_id` と `waf.tf`）。`zone_id` が空の間は `count` ガードで不作成なので、ドメイン確定前でも
 既存の R2/Hyperdrive 向け plan は No changes を保つ。
@@ -182,7 +182,7 @@ resource "cloudflare_ruleset" "auth_ratelimit" {
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
-cd infra/envs/mdcollab-cf-personal
+cd infra/envs/mdcollab-cloudflare
 tofu plan    # auth_ratelimit の新規作成 1件だけが出ること（R2/Hyperdrive は No changes）
 tofu apply
 ```

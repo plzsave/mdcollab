@@ -1,4 +1,4 @@
-# cf-personal を Terraform(OpenTofu) に import する手順
+# cloudflare env を Terraform(OpenTofu) に import する手順
 
 対象: **R2 バケット**と **Hyperdrive 設定**のみ（Worker は wrangler のまま）。
 ツール: OpenTofu（`tofu`。`~/.local/bin/tofu` に導入済み）。
@@ -12,7 +12,7 @@
 # tofu に PATH を通す（未設定なら）
 export PATH="$HOME/.local/bin:$PATH"
 tofu version   # OpenTofu v1.12.x
-cd infra/envs/mdcollab-cf-personal
+cd infra/envs/mdcollab-cloudflare
 ```
 
 ## 1. Cloudflare API トークンを作る（ダッシュボード）

@@ -10,8 +10,8 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "mdcollab-tfstate-workplace"
-    key            = "aws-workplace/terraform.tfstate"
+    bucket         = "mdcollab-tfstate-aws"
+    key            = "aws/terraform.tfstate"
     region         = "ap-northeast-1"
     dynamodb_table = "mdcollab-tflock"
     encrypt        = true
@@ -25,6 +25,6 @@ provider "aws" {
 
 # TODO(Phase 0):
 #   - aws_lambda_function / aws_apigatewayv2 (or App Runner/Fargate)  mdcollab-api
-#   - aws_s3_bucket            mdcollab-docs-workplace
+#   - aws_s3_bucket            mdcollab-docs-aws
 #   - aws_db_instance (Postgres, t4g.micro) もしくは aws_rds_cluster(Aurora SLv2)
 #   - RDS は VPC 内 → マイグレーションは CodeBuild の VPC 接続 or Lambda ランナー
