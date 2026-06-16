@@ -2,6 +2,8 @@
 
 mdcollab のドキュメント一覧。プロジェクト概要は [../README.md](../README.md)、残タスクは [GitHub issues](https://github.com/plzsave/mdcollab/issues) を参照。
 
+> ⚠ docs は**参考**であって権威ではない。手順・秘密・設定の**真実はコード/設定**（`wrangler.template.toml`・`infra/**/.envrc`+`terraform.tfvars`・`src/db/schema.ts` 等）。記載と実態がズレたら実ファイル側を正とし、docs を直す。出所の一覧は [`../CLAUDE.md`](../CLAUDE.md)。
+
 ## 運用・セットアップ
 
 | ドキュメント | 内容 |
