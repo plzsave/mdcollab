@@ -20,7 +20,7 @@ Markdown 共同編集 + コメントスレッド + AI レビュー。GAS 版 `md
 | フロント | React 19 + Vite + TanStack Router/Query + Tailwind v4 | SPA（`web/`）。Worker の `[assets]` で同居配信 |
 | AI | anthropic / openai | `complete`/`stream` ＋ tool use ループ（`converse`）。レビューはエージェント化済み |
 | 認証 | 自前 Google OIDC | jose。Cloudflare Access は不採用 |
-| IaC | Terraform / OpenTofu | `infra/modules` + `infra/envs/mdcollab-{cf-personal,aws-workplace,gcp}`。状態を持つ R2/Hyperdrive 等を管理 |
+| IaC | Terraform / OpenTofu | `infra/modules` + `infra/envs/mdcollab-{cloudflare,aws,gcp}`。状態を持つ R2/Hyperdrive 等を管理 |
 | CI | GitHub Actions | デプロイ実体は `scripts/` に集約。main push で自動デプロイ |
 
 ## 構成
@@ -41,7 +41,7 @@ src/
   routes/             # 全11本: auth, state, setup, folders, documents, statuses,
                       #   members, comments, notifications, ai, reviews
 web/                  # React/Vite SPA（フロント一式）
-infra/                # Terraform（modules + envs/mdcollab-{cf-personal,aws-workplace,gcp}）
+infra/                # Terraform（modules + envs/mdcollab-{cloudflare,aws,gcp}）
 scripts/              # deploy-cf.sh / deploy-aws.sh / gen-wrangler.sh（CI はこれを呼ぶだけ）
 ```
 
@@ -101,7 +101,7 @@ bun run deploy
 | Variables | `BASE_URL` / `CUSTOM_DOMAIN`(任意) / `S3_ENDPOINT` / `S3_BUCKET` / `HYPERDRIVE_ID` |
 
 状態を持つインフラ（R2 / Hyperdrive / WAF）は Terraform/OpenTofu 管理。
-手順は **[infra/envs/mdcollab-cf-personal/IMPORT.md](infra/envs/mdcollab-cf-personal/IMPORT.md)**、
+手順は **[infra/envs/mdcollab-cloudflare/IMPORT.md](infra/envs/mdcollab-cloudflare/IMPORT.md)**、
 独自ドメイン + WAF レート制限は **[docs/custom-domain-waf-ratelimit.md](docs/custom-domain-waf-ratelimit.md)**。
 
 ## 実装済み / 未実装

@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-ENV_DIR="infra/envs/mdcollab-aws-workplace"
+ENV_DIR="infra/envs/mdcollab-aws"
 
 echo "==> check (typecheck + test)"
 make check
