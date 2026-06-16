@@ -107,4 +107,53 @@ describe("createWebClient.fetchUrl", () => {
     });
     expect(await web.fetchUrl("https://nope.invalid/")).toContain("取得拒否");
   });
+
+  // Content-Length を小さく偽装しても、実バイトで打ち切られること（#47）。
+  it("Content-Length 偽装の巨大ボディは実バイトで打ち切る", async () => {
+    const huge = "a".repeat(200 * 1024); // 200KB（上限 64KB を大きく超える）
+    const web = createWebClient({
+      fetchImpl: (async () =>
+        res(huge, { contentType: "text/plain", contentLength: "10" })) as typeof fetch,
+      resolveHost: async () => ["93.184.216.34"],
+    });
+    const out = await web.fetchUrl("https://example.com/big");
+    expect(out).toContain("切り詰め");
+    expect(out.length).toBeLessThan(huge.length); // 全量は返らない
+    expect(out.length).toBeLessThanOrEqual(64 * 1024 + 32); // 上限＋マーカー程度
+  });
+
+  // Content-Length 不在（chunked 相当）の多チャンク ストリームでも、上限到達で受信を止めること（#47）。
+  it("chunked 多チャンクでも上限で abort して全量を読まない", async () => {
+    const pulled = { n: 0 };
+    const chunk = new Uint8Array(16 * 1024).fill(97); // 'a' × 16KB
+    const TOTAL = 1_000_000; // 全部読めば ~16GB。abort されなければ破綻する量
+    const streamRes = () => {
+      let i = 0;
+      const stream = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (i++ >= TOTAL) return controller.close();
+          pulled.n++;
+          controller.enqueue(chunk);
+        },
+      });
+      return new Response(stream, { headers: { "content-type": "text/plain" } });
+    };
+    const web = createWebClient({
+      fetchImpl: (async () => streamRes()) as typeof fetch,
+      resolveHost: async () => ["93.184.216.34"],
+    });
+    const out = await web.fetchUrl("https://example.com/stream");
+    expect(out).toContain("切り詰め");
+    // 64KB / 16KB ≈ 4〜5 チャンクで打ち切られる。全量(100万)など決して読まない。
+    expect(pulled.n).toBeLessThan(100);
+  });
+
+  // 正常系（上限内）はマーカーを付けず素通しすること（回帰確認）。
+  it("上限内のテキストは切り詰めマーカーを付けない", async () => {
+    const web = createWebClient({
+      fetchImpl: (async () => res("hello world", { contentType: "text/plain" })) as typeof fetch,
+      resolveHost: async () => ["93.184.216.34"],
+    });
+    expect(await web.fetchUrl("https://example.com/ok")).toBe("hello world");
+  });
 });

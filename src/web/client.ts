@@ -101,6 +101,48 @@ export interface WebClientOpts {
   resolveHost?: (host: string) => Promise<string[]>;
 }
 
+// レスポンスボディをストリームで読み、MAX_BYTES（実バイト）/ MAX_CHARS（デコード後文字数）で
+// 二重に頭打ちする。上限到達時は ctrl.abort() で残りの受信を止め、切り詰めマーカーを付けて返す。
+// body が無い実装（古い fetch 等）では res.text() にフォールバックする。
+async function readTextCapped(res: Response, ctrl: AbortController): Promise<string> {
+  const reader = res.body?.getReader();
+  if (!reader) {
+    const text = await res.text();
+    return text.length > MAX_CHARS ? `${text.slice(0, MAX_CHARS)}\n（…切り詰め）` : text;
+  }
+  const decoder = new TextDecoder();
+  let received = 0;
+  let out = "";
+  let truncated = false;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      const before = received;
+      received += value.byteLength;
+      if (received > MAX_BYTES) {
+        const allowed = Math.max(0, MAX_BYTES - before);
+        out += decoder.decode(value.slice(0, allowed), { stream: true });
+        truncated = true;
+        ctrl.abort();
+        break;
+      }
+      out += decoder.decode(value, { stream: true });
+      if (out.length > MAX_CHARS) {
+        truncated = true;
+        ctrl.abort();
+        break;
+      }
+    }
+  }
+  out += decoder.decode(); // フラッシュ（末尾のマルチバイト境界）
+  if (out.length > MAX_CHARS) {
+    out = out.slice(0, MAX_CHARS);
+    truncated = true;
+  }
+  return truncated ? `${out}\n（…切り詰め）` : out;
+}
+
 export function createWebClient(opts: WebClientOpts = {}): WebClient {
   const doFetch = opts.fetchImpl ?? fetch;
   const resolveHost = opts.resolveHost;
@@ -136,11 +178,14 @@ export function createWebClient(opts: WebClientOpts = {}): WebClient {
         if (!res.ok) return `（取得に失敗: HTTP ${res.status}）`;
         const ct = res.headers.get("content-type") ?? "";
         if (!TEXT_CT.test(ct)) return `（取得拒否: テキスト以外の Content-Type です: ${ct || "不明"}）`;
+        // Content-Length が宣言されていて上限超ならボディを読まず拒否（早期足切り）。
         if (Number(res.headers.get("content-length") ?? "0") > MAX_BYTES) {
           return `（取得拒否: サイズ上限 ${MAX_BYTES / 1024}KB を超えます）`;
         }
-        const text = await res.text();
-        return text.length > MAX_CHARS ? `${text.slice(0, MAX_CHARS)}\n（…切り詰め）` : text;
+        // Content-Length は不在/偽装され得る（chunked 等）ので、実バイトをストリームで積算しながら
+        // MAX_BYTES を超えた時点で abort して打ち切る。res.text() で全体をメモリに展開すると
+        // 悪意あるリンク先が Workers の isolate メモリ(128MB)を圧迫し得るため（#47）。
+        return await readTextCapped(res, ctrl);
       } catch (e) {
         const msg =
           e instanceof Error && e.name === "AbortError"
