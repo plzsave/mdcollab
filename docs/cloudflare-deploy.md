@@ -5,6 +5,9 @@ Terraform / CI はまだ使わず、まず本番 `/health` を通すことを目
 ここで作った R2 / Hyperdrive は、後で `terraform import` で一括管理へ移せる（作り直し不要）。
 
 > データ移行は不要（本番は空スタート）。MD は起動後に手動 or アプリ経由で追加する。
+>
+> ⚠ この手順書は**参考**。設定の真実は `wrangler.template.toml` + `.env`、秘密は `wrangler secret` /
+> infra の `.env`+`terraform.tfvars`（[`../CLAUDE.md`](../CLAUDE.md) の source of truth 参照）。記載と実態がズレたら実ファイル側を正とする。
 
 ---
 

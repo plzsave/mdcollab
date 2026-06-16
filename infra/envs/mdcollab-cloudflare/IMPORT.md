@@ -3,6 +3,9 @@
 対象: **R2 バケット**と **Hyperdrive 設定**のみ（Worker は wrangler のまま）。
 ツール: OpenTofu（`tofu`。`~/.local/bin/tofu` に導入済み）。
 
+> 状態: **import は実施済み**（既存リソースは Terraform 管理下）。このファイルの恒久的な中身は
+> 「秘密の渡し方（§0〜2）」と「state について」。§3〜6 の一度きりの import 手順は再現用に折りたたみ。
+
 > 秘密はリポジトリに置かず、direnv と tfvars 経由で**自動ロード**する（どちらも gitignore 済み）:
 > - `CLOUDFLARE_API_TOKEN` → このディレクトリの `.env`（`.envrc` の `dotenv` が cd 時に読む）
 > - `neon_password` / `account_id` / `zone_id` / `r2_bucket_name` / `neon_host` → `terraform.tfvars`（tofu が自動で読む）
@@ -46,6 +49,9 @@ tofu が自動で読むので export は不要:
 
 > リポジトリにはプレースホルダの `.example` だけが入る（実値はコミットしない）。
 
+<details>
+<summary>一度きりの import 手順（実施済み・再現用に残置）</summary>
+
 ## 3. init（未実施なら）
 
 ```bash
@@ -84,6 +90,8 @@ tofu plan
 
 import は「既存を Terraform 管理下に置く」だけ。`apply` で新規作成は起きない想定
 （plan が No changes なら apply 不要）。以後の変更は `.tf` 編集 → `tofu plan/apply`。
+
+</details>
 
 ## state について
 
