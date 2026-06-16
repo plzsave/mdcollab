@@ -103,13 +103,13 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 **Cloudflare 優先**（AWS は後回し）。**データ移行は不要**（本番は空スタート）。
 方針: **軽い入り方**（wrangler 手動デプロイで本番起動）→ 後で `terraform import` で一括管理へ。
 - [x] **Cloudflare 実起動完了**（2026-06-10）。`https://mdcollab-api.yskab-dev.workers.dev`。
-  Workers + Hyperdrive→Neon + R2 + 自前 Google OAuth + setup(owner化) + 文書 R2 往復まで本番疎通確認済み。
+  Workers + Hyperdrive→Postgres + R2 + 自前 Google OAuth + setup(owner化) + 文書 R2 往復まで本番疎通確認済み。
   手順書 [`docs/cloudflare-deploy.md`](../cloudflare-deploy.md)。secrets は `wrangler secret`（SESSION/ENCRYPTION/S3×2/GOOGLE×2）。
-- [x] **Terraform(cf-personal) 実リソース化 完了**（2026-06-12・R2/Hyperdrive のみ・Worker は wrangler 継続）。
-  OpenTofu で import 済み・`tofu plan` 差分ゼロ（`infra/envs/mdcollab-cf-personal/`・provider 5.19・state ローカル）。
+- [x] **Terraform(cloudflare) 実リソース化 完了**（2026-06-12・R2/Hyperdrive のみ・Worker は wrangler 継続）。
+  OpenTofu で import 済み・`tofu plan` 差分ゼロ（`infra/envs/mdcollab-cloudflare/`・provider 5.19・state ローカル）。
   Hyperdrive は password/mtls を `ignore_changes`。手順 `IMPORT.md`。
 - [x] **CI/CD 完了**（GitHub Actions・repo `plzsave/mdcollab` private）。`ci.yml`: check[typecheck+test+webビルド] → main push で deploy-cf（web build→wrangler deploy→smoke）。`CLOUDFLARE_API_TOKEN` 投入済みで全ジョブ緑・自動デプロイ稼働。Terraform/migrate は CI 非対象（手動）。
-- [ ] （後回し）**Lambda/Fargate アダプタ** ＋ **Terraform(aws-workplace)** ＋ **CodePipeline**
+- [ ] （後回し）**Lambda/Fargate アダプタ** ＋ **Terraform(aws)** ＋ **CodePipeline**
 - [x] ~~データ移行スクリプト~~ → **不要**（本番空スタート・履歴引き継ぎなし）
 
 ---
@@ -203,8 +203,8 @@ GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcoll
 ### フェーズ2: インフラ（Cloudflare 優先・フロントと並行可）
 決定（2026-06-10）: **データ移行は不要**（本番は空スタート・MD は必要時に手動追加・履歴引き継ぎ不要）。
 **インフラは Cloudflare を先に通す**（AWS は後回し）。
-6. ⬜ **Cloudflare 実起動**（Workers + Hyperdrive→Neon + R2）→ **Terraform(cf-personal)** → **CI(GitHub Actions)**
-7. ⬜ （後回し）AWS 一式（RDS/Lambda or Fargate・Terraform aws-workplace・CodePipeline）
+6. ⬜ **Cloudflare 実起動**（Workers + Hyperdrive→Postgres + R2）→ **Terraform(cloudflare)** → **CI(GitHub Actions)**
+7. ⬜ （後回し）AWS 一式（RDS/Lambda or Fargate・Terraform aws・CodePipeline）
 
 ### フェーズ3: フロントエンド（フレームワーク・別フェーズ）
 7. ⬜ 技術選定（SPA フレームワーク等。決めたら導入パッケージ同梱の `skills/SKILL.md` を確認）

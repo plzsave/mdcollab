@@ -7,7 +7,7 @@
 
 1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクトを作成 or 選択。
 2. **APIs & Services → OAuth consent screen**:
-   - 個人の Google アカウントで試す → **External**。後述のテストユーザーに自分を追加。
+   - 通常の Google アカウント（@gmail.com 等）で試す → **External**。後述のテストユーザーに自分を追加。
    - Workspace アカウント → **Internal**（同一ドメインのみ・審査不要）。
    - スコープは `openid` / `email` / `profile` の3つだけ（非機微・Google 審査不要）。
 
