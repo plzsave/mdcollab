@@ -31,7 +31,7 @@ npx wrangler whoami         # アカウントが出れば OK
 ## 1. R2 バケットを作る（本体MDストア）
 
 ```bash
-npx wrangler r2 bucket create mdcollab-docs-personal
+npx wrangler r2 bucket create mdcollab-docs
 ```
 
 S3互換アクセス用のキーは **Cloudflare ダッシュボード → R2 → Manage R2 API Tokens** で発行し、
@@ -69,7 +69,7 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET
 
 # R2（S3互換）
 npx wrangler secret put S3_ENDPOINT          # https://<ACCOUNT_ID>.r2.cloudflarestorage.com
-npx wrangler secret put S3_BUCKET            # mdcollab-docs-personal
+npx wrangler secret put S3_BUCKET            # mdcollab-docs
 npx wrangler secret put S3_ACCESS_KEY_ID
 npx wrangler secret put S3_SECRET_ACCESS_KEY
 ```
