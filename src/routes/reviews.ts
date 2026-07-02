@@ -8,7 +8,8 @@ import { decryptSecret } from "../crypto";
 import { anchorTextFor, parseFindings } from "../ai/findings";
 import { AI_THREAD_AUTHOR, recordAiEvent } from "../ai/events";
 import { LIMITS } from "../limits";
-import { runReviewAgent, type RunReviewAgentResult, type ToolImpl } from "../ai/reviewAgent";
+import { type RunReviewAgentResult, type ToolImpl } from "../ai/reviewAgent";
+import { runReviewAgentWithModelFallback } from "../ai/modelFallback";
 import type { LlmUsage } from "../llm/types";
 import {
   fetchRepoFileTool,
@@ -183,14 +184,14 @@ export function reviewsRoutes(deps: Deps) {
     const system = buildSystem(tools.length > 0);
     const initialPrompt = reviewPrompt(loaded.content, body.instructions ?? "", opts.repo, opts.repoContext);
 
-    const persist = async (r: RunReviewAgentResult) => {
+    const persist = async (r: RunReviewAgentResult, modelUsed: string) => {
       const [saved] = await deps.db
         .insert(reviews)
         .values({
           id: crypto.randomUUID(),
           documentId: id,
           provider: cfg.provider,
-          model: cfg.model,
+          model: modelUsed,
           content: r.text,
           createdBy: email,
           inputTokens: r.usage?.inputTokens ?? null,
@@ -207,7 +208,7 @@ export function reviewsRoutes(deps: Deps) {
     if (wantsStream(c)) {
       return streamSSE(c, async (stream) => {
         try {
-          const r = await runReviewAgent({
+          const { result: r, modelUsed, fellBack } = await runReviewAgentWithModelFallback({
             llm: deps.llm,
             provider: cfg.provider,
             model: cfg.model,
@@ -217,13 +218,15 @@ export function reviewsRoutes(deps: Deps) {
             tools,
             onEvent: (e) => stream.writeSSE({ event: e.type, data: e.data }),
           });
-          const saved = await persist(r);
+          if (fellBack) await recordAiEvent(deps, { documentId: id, actor: email, action: "model_fallback" });
+          const saved = await persist(r, modelUsed);
           await stream.writeSSE({
             event: "done",
             data: JSON.stringify({
               id: saved.id,
               provider: cfg.provider,
-              model: cfg.model,
+              model: modelUsed,
+              fellBack,
               repo: opts.repo,
               toolsUsed: r.toolsUsed,
               truncated: r.truncated,
@@ -240,7 +243,7 @@ export function reviewsRoutes(deps: Deps) {
       });
     }
 
-    const r = await runReviewAgent({
+    const { result: r, modelUsed, fellBack } = await runReviewAgentWithModelFallback({
       llm: deps.llm,
       provider: cfg.provider,
       model: cfg.model,
@@ -250,12 +253,14 @@ export function reviewsRoutes(deps: Deps) {
       tools,
       onEvent: () => {},
     });
-    const saved = await persist(r);
+    if (fellBack) await recordAiEvent(deps, { documentId: id, actor: email, action: "model_fallback" });
+    const saved = await persist(r, modelUsed);
     return c.json({
       id: saved.id,
       review: r.text,
       provider: cfg.provider,
-      model: cfg.model,
+      model: modelUsed,
+      fellBack,
       createdAt: saved.createdAt,
       createdByName: await displayNameOf(deps, email),
       toolsUsed: r.toolsUsed,
@@ -324,7 +329,7 @@ export function reviewsRoutes(deps: Deps) {
       getRevisionDiffTool(deps, id),
       webFetchTool(deps),
     ];
-    const r = await runReviewAgent({
+    const { result: r, fellBack } = await runReviewAgentWithModelFallback({
       llm: deps.llm,
       provider: cfg.provider,
       model: cfg.model,
@@ -334,6 +339,7 @@ export function reviewsRoutes(deps: Deps) {
       tools,
       onEvent: () => {},
     });
+    if (fellBack) await recordAiEvent(deps, { documentId: id, actor: email, action: "model_fallback" });
     const findings = parseFindings(r.text);
 
     // 重複ポリシー: 既存の AI（ai-review）かつ open のスレッドを置換（人間・resolved には触れない）。
@@ -406,7 +412,7 @@ export function reviewsRoutes(deps: Deps) {
     ];
 
     const prompt = `次の Markdown 文書を、レビュー指摘と指示に従って書き直した全文を返してください。\n\n# レビュー\n${body.reviewContent ?? "(なし)"}\n\n# 指示\n${body.instructions ?? "(特になし)"}\n\n# 文書\n${loaded.content}`;
-    const r = await runReviewAgent({
+    const { result: r, modelUsed, fellBack } = await runReviewAgentWithModelFallback({
       llm: deps.llm,
       provider: cfg.provider,
       model: cfg.model,
@@ -416,6 +422,7 @@ export function reviewsRoutes(deps: Deps) {
       tools,
       onEvent: () => {},
     });
+    if (fellBack) await recordAiEvent(deps, { documentId: id, actor: email, action: "model_fallback" });
     const revised = r.text;
 
     const usageCols = {
@@ -435,7 +442,7 @@ export function reviewsRoutes(deps: Deps) {
         content: revised,
         baseVersion: loaded.doc.version,
         provider: cfg.provider,
-        model: cfg.model,
+        model: modelUsed,
         ...usageCols,
       })
       .onConflictDoUpdate({
@@ -444,7 +451,7 @@ export function reviewsRoutes(deps: Deps) {
           content: revised,
           baseVersion: loaded.doc.version,
           provider: cfg.provider,
-          model: cfg.model,
+          model: modelUsed,
           ...usageCols,
         },
       });
@@ -452,7 +459,8 @@ export function reviewsRoutes(deps: Deps) {
     return c.json({
       revised,
       provider: cfg.provider,
-      model: cfg.model,
+      model: modelUsed,
+      fellBack,
       baseVersion: loaded.doc.version,
       toolsUsed: r.toolsUsed,
       truncated: r.truncated,
