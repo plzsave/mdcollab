@@ -7,7 +7,12 @@ import { aiReviewEvents } from "../db/schema";
 // AI 著者の sentinel（threads.createdBy / comments.author）。web は「🤖 AI レビュー」表示。
 export const AI_THREAD_AUTHOR = "ai-review";
 
-export type AiReviewAction = "threads_created" | "threads_superseded" | "thread_resolved";
+export type AiReviewAction =
+  | "threads_created"
+  | "threads_superseded"
+  | "thread_resolved"
+  // 保存済みモデルの退役等で代替モデルにフォールバックした（#81。「設定が古い」検知の信号）
+  | "model_fallback";
 
 // 追記は可観測性のための副作用。失敗しても本処理を止めない（never throw）。
 export async function recordAiEvent(
