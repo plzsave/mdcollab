@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, eq, inArray, desc } from "drizzle-orm";
+import { and, eq, inArray, isNull, desc } from "drizzle-orm";
 import type { Deps } from "../env";
 import { requireMember, type Vars } from "../auth/middleware";
 import { LIMITS, lengthError } from "../limits";
@@ -108,6 +108,19 @@ export function documentsRoutes(deps: Deps) {
       );
     }
     const folderId = body.folderId ?? null;
+    // 同名リネーム（旧 uniqueDocTitle 踏襲）: 取り込み先フォルダの既存タイトルと
+    // 同一バッチ内の重複を "base (2)" 形式で回避する。
+    const existing = await deps.db
+      .select({ title: documents.title })
+      .from(documents)
+      .where(folderId === null ? isNull(documents.folderId) : eq(documents.folderId, folderId));
+    const taken = new Set(existing.map((r) => r.title));
+    const uniqueTitle = (base: string) => {
+      let candidate = base;
+      for (let n = 2; taken.has(candidate); n++) candidate = `${base} (${n})`;
+      taken.add(candidate);
+      return candidate;
+    };
     const results: { name: string; ok: boolean; id?: string; docName?: string; error?: string }[] =
       [];
     for (const f of body.files) {
@@ -125,7 +138,7 @@ export function documentsRoutes(deps: Deps) {
         continue;
       }
       try {
-        const title = titleFromFilename(f.name);
+        const title = uniqueTitle(titleFromFilename(f.name));
         const doc = await createDoc(deps, { folderId, title, content: f.content, createdBy: email });
         results.push({ name, ok: true, id: doc.id, docName: doc.title });
       } catch (e) {

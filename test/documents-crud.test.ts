@@ -274,6 +274,54 @@ describe("POST /api/documents/import", () => {
     expect(rows[1]!.docName).toBe("memo");
   });
 
+  it("同名は 'base (2)' 形式に自動リネームされる（既存文書・同一バッチ内とも）", async () => {
+    const h = await asMember();
+    // 既存文書 "memo" を用意
+    await h.req("/api/documents/import", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({ files: [{ name: "memo.md", content: "v1" }] }),
+    });
+    // 同名を同一バッチで2つ取り込む → (2), (3) と採番される
+    const res = await h.req("/api/documents/import", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({
+        files: [
+          { name: "memo.md", content: "v2" },
+          { name: "memo.markdown", content: "v3" },
+        ],
+      }),
+    });
+    const rows = (await res.json()) as { ok: boolean; docName?: string }[];
+    expect(rows.map((r) => r.docName)).toEqual(["memo (2)", "memo (3)"]);
+  });
+
+  it("同名リネームはフォルダ単位（別フォルダの同名タイトルには影響しない）", async () => {
+    const h = await asMember();
+    const folder = (await (
+      await h.req("/api/folders", {
+        as: "u@example.com",
+        method: "POST",
+        body: JSON.stringify({ name: "F" }),
+      })
+    ).json()) as { id: string };
+    // ルート（フォルダ無し）に "memo" を作成
+    await h.req("/api/documents/import", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({ files: [{ name: "memo.md", content: "root" }] }),
+    });
+    // 別フォルダへの取り込みはリネームされない
+    const res = await h.req("/api/documents/import", {
+      as: "u@example.com",
+      method: "POST",
+      body: JSON.stringify({ folderId: folder.id, files: [{ name: "memo.md", content: "in F" }] }),
+    });
+    const rows = (await res.json()) as { docName?: string }[];
+    expect(rows[0]!.docName).toBe("memo");
+  });
+
   it("files[] が無いと 400 / 上限超過は 400", async () => {
     const h = await asMember();
     expect(

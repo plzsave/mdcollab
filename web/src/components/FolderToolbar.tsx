@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ApiError } from "../api/client";
 import {
@@ -57,21 +57,74 @@ export function FolderToolbar({
     );
   };
 
-  const onFiles = async (list: FileList | null) => {
-    if (!list || list.length === 0) return;
+  // 取り込み共通処理（ファイル選択 / D&D 両対応）。.md / .markdown 以外は送らず無視する。
+  const importFiles = async (all: File[]) => {
+    if (all.length === 0) return;
     setImportMsg(null);
+    const mdFiles = all.filter((f) => /\.(md|markdown)$/i.test(f.name));
+    const skipped = all.length - mdFiles.length;
+    const skippedNote = skipped ? `（.md / .markdown 以外 ${skipped} 件は無視）` : "";
+    if (mdFiles.length === 0) {
+      setImportMsg(`取り込めるファイルがありません${skippedNote}`);
+      return;
+    }
     const files = await Promise.all(
-      [...list].map(async (f) => ({ name: f.name, content: await f.text() })),
+      mdFiles.map(async (f) => ({ name: f.name, content: await f.text() })),
     );
     importDocs.mutate(files, {
       onSuccess: (results) => {
         const ok = results.filter((r) => r.ok).length;
         const ng = results.length - ok;
-        setImportMsg(`取込: 成功 ${ok}${ng ? ` / 失敗 ${ng}` : ""}`);
+        setImportMsg(`取込: 成功 ${ok}${ng ? ` / 失敗 ${ng}` : ""}${skippedNote}`);
       },
     });
+  };
+
+  const onFiles = async (list: FileList | null) => {
+    if (!list || list.length === 0) return;
+    await importFiles([...list]);
     if (fileRef.current) fileRef.current.value = "";
   };
+
+  // D&D 取り込み（#65）: ページ上でファイルをドラッグ中だけドロップ帯を出す。
+  // dragenter/leave は子要素ごとに発火するので深さを数えて「本当に離れた」を判定（旧実装踏襲）。
+  // window の dragover/drop を preventDefault し、帯の外に落としてもブラウザがファイルを開かないようにする。
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    let depth = 0;
+    const hasFiles = (e: DragEvent) => !!e.dataTransfer && [...e.dataTransfer.types].includes("Files");
+    const enter = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth++;
+      setDragging(true);
+    };
+    const over = (e: DragEvent) => {
+      if (hasFiles(e)) e.preventDefault();
+    };
+    const leave = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      if (--depth <= 0) {
+        depth = 0;
+        setDragging(false);
+      }
+    };
+    const drop = (e: DragEvent) => {
+      depth = 0;
+      setDragging(false);
+      if (hasFiles(e)) e.preventDefault(); // 帯以外へのドロップはファイルを開かず無視
+    };
+    window.addEventListener("dragenter", enter);
+    window.addEventListener("dragover", over);
+    window.addEventListener("dragleave", leave);
+    window.addEventListener("drop", drop);
+    return () => {
+      window.removeEventListener("dragenter", enter);
+      window.removeEventListener("dragover", over);
+      window.removeEventListener("dragleave", leave);
+      window.removeEventListener("drop", drop);
+    };
+  }, []);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -164,6 +217,20 @@ export function FolderToolbar({
           className="hidden"
         />
       </div>
+
+      {dragging && (
+        <div
+          data-testid="md-dropzone"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            void importFiles([...(e.dataTransfer?.files ?? [])]);
+          }}
+          className="w-full rounded-md border-2 border-dashed border-sky-400 bg-sky-50 px-4 py-6 text-center text-sm font-medium text-sky-700 dark:border-sky-600 dark:bg-sky-900/30 dark:text-sky-300"
+        >
+          ここに .md / .markdown ファイルをドロップで取り込み（複数可・同名は自動リネーム）
+        </div>
+      )}
 
       {creating && (
         <div className="flex w-full items-center gap-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2">
