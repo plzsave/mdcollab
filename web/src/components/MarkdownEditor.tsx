@@ -9,6 +9,7 @@ import { applyHighlights } from "../lib/highlight";
 import { clearDraft, loadDraft, saveDraft } from "../lib/draft";
 import { CommentPanel, type DraftAnchor } from "./CommentPanel";
 import { AiReviewPanel } from "./AiReviewPanel";
+import { DiffView } from "./DiffView";
 import { IconChat, IconMore } from "./icons";
 import { useConfirm } from "./ui/confirm";
 import { useToast } from "./ui/toast";
@@ -48,6 +49,9 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
 
   const [showComments, setShowComments] = useState(false);
   const [showReview, setShowReview] = useState(false);
+  // AI 改稿案の反映前差分確認（#64）。反映確定/キャンセルの結果を AiReviewPanel へ返す。
+  const [pendingRevision, setPendingRevision] = useState<string | null>(null);
+  const revisionResolveRef = useRef<((applied: boolean) => void) | null>(null);
   const [draft, setDraft] = useState<DraftAnchor | null>(null);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [focusTick, setFocusTick] = useState(0);
@@ -238,6 +242,22 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
     setBaseVersion(latest.version);
     setConflict(null);
     qc.invalidateQueries({ queryKey: ["document", doc.id] });
+  };
+
+  // AI 改稿案の反映要求: いきなり置換せず差分モーダルを開き、確定時のみ反映する（#64）。
+  const requestApplyRevision = (next: string) =>
+    new Promise<boolean>((resolve) => {
+      revisionResolveRef.current = resolve;
+      setPendingRevision(next);
+    });
+  const closeRevisionDiff = (applied: boolean) => {
+    if (applied && pendingRevision !== null) {
+      setContent(pendingRevision);
+      toast.success("改稿案を反映しました（保存はまだです）");
+    }
+    revisionResolveRef.current?.(applied);
+    revisionResolveRef.current = null;
+    setPendingRevision(null);
   };
 
   // 下書き復元バナーの操作（#22）。
@@ -466,10 +486,50 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
       {showReview && (
         <AiReviewPanel
           documentId={doc.id}
-          onApplyRevision={(next) => setContent(next)}
+          onApplyRevision={requestApplyRevision}
           onClose={() => setShowReview(false)}
         />
       )}
+
+      {/* AI 改稿案の反映前差分確認（#64）。エディタ現在値（−）と改稿案（＋）の行差分。 */}
+      <Modal
+        open={pendingRevision !== null}
+        onClose={() => closeRevisionDiff(false)}
+        wide
+        labelledBy="revision-diff-title"
+        describedBy="revision-diff-desc"
+      >
+        <h2 id="revision-diff-title" className="text-base font-semibold">
+          改稿案の差分確認
+        </h2>
+        <p id="revision-diff-desc" className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          現在のエディタ本文（−）と AI 改稿案（＋）の行差分です。反映してもサーバへは保存されません。
+        </p>
+        {dirty && (
+          <p className="mt-2 rounded bg-amber-50 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+            エディタに未保存の編集があります。反映するとその内容ごと改稿案で置き換わります。
+          </p>
+        )}
+        <div className="mt-3 max-h-[60vh] overflow-y-auto rounded border border-slate-200 dark:border-slate-700">
+          <DiffView oldText={content} newText={pendingRevision ?? ""} />
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => closeRevisionDiff(false)}
+            className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            キャンセル
+          </button>
+          <button
+            type="button"
+            onClick={() => closeRevisionDiff(true)}
+            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            エディタに反映
+          </button>
+        </div>
+      </Modal>
 
       {/* アプリ内ナビ離脱の確認（#22）。beforeunload は useBlocker が別途担保。 */}
       <Modal

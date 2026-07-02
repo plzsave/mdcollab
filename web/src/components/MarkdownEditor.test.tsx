@@ -1,7 +1,22 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ApiError } from "../api/client";
 import type { DocumentFull } from "../api/types";
+
+// AiReviewPanel は改稿案を1つ流し込むだけのスタブにする（#64 の差分確認フロー検証用）。
+// onApplyRevision の解決値（反映されたか）を applyResults に記録する。
+const applyResults: boolean[] = [];
+vi.mock("./AiReviewPanel", () => ({
+  AiReviewPanel: ({ onApplyRevision }: { onApplyRevision: (c: string) => Promise<boolean> }) => (
+    <button
+      onClick={async () => {
+        applyResults.push(await onApplyRevision("行1\n行A"));
+      }}
+    >
+      改稿を反映(stub)
+    </button>
+  ),
+}));
 
 // hooks / router / query-client はプロバイダ不要にするためモックする。
 // これにより MarkdownEditor 自身のロジック（dirty 表示・409 衝突バナー・上書き保存）を隔離して検証する。
@@ -47,6 +62,7 @@ beforeEach(() => {
   saveMutate.mockReset();
   delMutate.mockReset();
   localStorage.clear();
+  applyResults.length = 0;
 });
 
 describe("MarkdownEditor", () => {
@@ -100,6 +116,41 @@ describe("MarkdownEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "保存" }));
     expect(screen.getByText(/サーバは v9/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "上書き保存" })).toBeInTheDocument();
+  });
+
+  it("AI 改稿案は差分モーダルで確認してから反映される（#64）", async () => {
+    render(<MarkdownEditor doc={makeDoc({ content: "行1\n行2" })} />);
+    fireEvent.click(screen.getByRole("button", { name: "AI レビュー" }));
+    fireEvent.click(screen.getByRole("button", { name: "改稿を反映(stub)" }));
+
+    // いきなり置換されず、差分モーダルが開く（del: 行2 / add: 行A）
+    expect(editorTextarea().value).toBe("行1\n行2");
+    expect(screen.getByText("改稿案の差分確認")).toBeInTheDocument();
+    expect(document.querySelector(".diff-del")?.textContent).toContain("行2");
+    expect(document.querySelector(".diff-add")?.textContent).toContain("行A");
+
+    fireEvent.click(screen.getByRole("button", { name: "エディタに反映" }));
+    expect(editorTextarea().value).toBe("行1\n行A");
+    await waitFor(() => expect(applyResults).toEqual([true]));
+  });
+
+  it("差分モーダルをキャンセルすると本文は変わらず、改稿案側へ false を返す（#64）", async () => {
+    render(<MarkdownEditor doc={makeDoc({ content: "行1\n行2" })} />);
+    fireEvent.click(screen.getByRole("button", { name: "AI レビュー" }));
+    fireEvent.click(screen.getByRole("button", { name: "改稿を反映(stub)" }));
+    fireEvent.click(screen.getByRole("button", { name: "キャンセル" }));
+
+    expect(editorTextarea().value).toBe("行1\n行2");
+    expect(screen.queryByText("改稿案の差分確認")).toBeNull();
+    await waitFor(() => expect(applyResults).toEqual([false]));
+  });
+
+  it("未保存の編集があると差分モーダルに警告を出す（#64）", () => {
+    render(<MarkdownEditor doc={makeDoc({ content: "行1" })} />);
+    fireEvent.change(editorTextarea(), { target: { value: "行1（編集中）" } });
+    fireEvent.click(screen.getByRole("button", { name: "AI レビュー" }));
+    fireEvent.click(screen.getByRole("button", { name: "改稿を反映(stub)" }));
+    expect(screen.getByText(/未保存の編集があります。反映するとその内容ごと/)).toBeInTheDocument();
   });
 
   it("上書き保存はサーバ current バージョンを baseVersion に使う", () => {

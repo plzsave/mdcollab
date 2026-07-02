@@ -60,13 +60,15 @@ function toolLabel({ name, arg }: ReviewToolEvent): string {
 
 // AI レビュー側パネル（エディタ右）。SSE で逐次表示し、保存済みレビューも一覧。
 // 改稿（全文書き直し）を生成し、onApply でエディタ本文へ反映できる。
+// onApplyRevision は反映が確定したかを返す（エディタ側の差分確認でキャンセルされたら
+// false）。キャンセル時は改稿案を保持したままにする（#64）。
 export function AiReviewPanel({
   documentId,
   onApplyRevision,
   onClose,
 }: {
   documentId: string;
-  onApplyRevision: (content: string) => void;
+  onApplyRevision: (content: string) => Promise<boolean>;
   onClose: () => void;
 }) {
   const qc = useQueryClient();
@@ -282,8 +284,9 @@ export function AiReviewPanel({
               <RevisionPreview
                 revised={revised}
                 cost={revisedCost ? formatCost(revisedCost.usage, revisedCost.model) : null}
-                onApply={() => {
-                  onApplyRevision(revised);
+                onApply={async () => {
+                  const applied = await onApplyRevision(revised);
+                  if (!applied) return; // 差分確認でキャンセル → 改稿案は残す
                   setRevised(null);
                   setRevisedCost(null);
                 }}

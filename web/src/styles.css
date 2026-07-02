@@ -105,6 +105,44 @@ html.dark body {
   margin: 1.2rem 0;
 }
 
+/* AI 改稿案の行差分ビュー（#64） */
+.diff-view {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.diff-line {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0 0.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.diff-sign {
+  flex-shrink: 0;
+  width: 1ch;
+  opacity: 0.45;
+  user-select: none;
+}
+.diff-add {
+  background: rgba(16, 185, 129, 0.16);
+}
+.diff-del {
+  background: rgba(239, 68, 68, 0.16);
+}
+.diff-ctx {
+  color: #6b7280;
+}
+.dark .diff-ctx {
+  color: #9ca3af;
+}
+.dark .diff-add {
+  background: rgba(16, 185, 129, 0.22);
+}
+.dark .diff-del {
+  background: rgba(239, 68, 68, 0.22);
+}
+
 /* Mermaid 図（```mermaid ブロックの差し替え先・#62） */
 .md-preview .mermaid-figure {
   margin: 0.8rem 0;

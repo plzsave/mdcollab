@@ -16,6 +16,7 @@ export function Modal({
   labelledBy,
   describedBy,
   initialFocusRef,
+  wide = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -23,6 +24,8 @@ export function Modal({
   labelledBy?: string;
   describedBy?: string;
   initialFocusRef?: React.RefObject<HTMLElement | null>;
+  /** 差分表示など横幅が要るダイアログ用（max-w-md → max-w-3xl） */
+  wide?: boolean;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const prevFocusRef = useRef<HTMLElement | null>(null);
@@ -97,7 +100,7 @@ export function Modal({
         aria-labelledby={labelledBy}
         aria-describedby={describedBy}
         tabIndex={-1}
-        className="relative z-10 w-full max-w-md rounded-lg bg-white p-5 shadow-xl outline-none dark:bg-slate-800 dark:text-slate-100"
+        className={`relative z-10 w-full ${wide ? "max-w-3xl" : "max-w-md"} rounded-lg bg-white p-5 shadow-xl outline-none dark:bg-slate-800 dark:text-slate-100`}
       >
         {children}
       </div>
