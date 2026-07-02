@@ -5,6 +5,7 @@ import { ApiError } from "../api/client";
 import { useAiSettings, useCreateRevision, useReviewThreads, useReviews } from "../api/hooks";
 import { streamReview, type ReviewToolEvent, type ReviewUsage } from "../api/review-stream";
 import { renderMarkdown } from "../lib/markdown";
+import { MarkdownView } from "./MarkdownView";
 import type { Review } from "../api/types";
 
 function formatTokens(n: number): string {
@@ -366,10 +367,9 @@ function PastReviews({ reviews }: { reviews: Review[] | undefined }) {
               </button>
               {expanded && (
                 <div className="border-t border-slate-100 dark:border-slate-800 px-3 py-2">
-                  <div
-                    className="md-preview"
-                    dangerouslySetInnerHTML={{ __html: renderMarkdown(r.content) }}
-                  />
+                  {/* mermaid 差し替え込みの表示（ストリーム中のライブ領域は未完ソースで
+                      エラー表示が点滅するため素のまま、確定した履歴のみ図にする） */}
+                  <MarkdownView className="md-preview" html={renderMarkdown(r.content)} />
                   {formatCost(r, r.model) && (
                     <p className="mt-2 text-[11px] text-slate-400">{formatCost(r, r.model)}</p>
                   )}
