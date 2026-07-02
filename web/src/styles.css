@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* コードブロックの構文ハイライト（#63）。.md-preview pre は明暗とも濃紺背景なのでダーク系テーマ1本 */
+@import "highlight.js/styles/github-dark.css";
 
 /* dark: を OS 設定ではなく html.dark クラスで切り替える方式にする（手動トグル＋OS追従を JS で制御）。 */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -74,6 +76,12 @@ html.dark body {
 .md-preview pre code {
   background: transparent;
   color: inherit;
+  padding: 0;
+}
+/* hljs テーマ（github-dark）の code.hljs 既定（padding/背景色）を打ち消し、
+   既存の .md-preview pre の見た目を保つ。トークン色は .hljs-* スパンにのみ効かせる */
+.md-preview pre code.hljs {
+  background: transparent;
   padding: 0;
 }
 .md-preview blockquote {

@@ -30,6 +30,44 @@ describe("renderMarkdown", () => {
   });
 });
 
+// #63 コード構文ハイライト: 言語指定付きコードブロックをトークン色分けする
+describe("renderMarkdown: コード構文ハイライト", () => {
+  it("言語指定付き（ts/bash）はトークンが span で色分けされる", () => {
+    const ts = renderMarkdown('```ts\nconst n: number = 1;\n```');
+    expect(ts).toContain('<code class="language-ts hljs">');
+    expect(ts).toContain('class="hljs-keyword"');
+    const bash = renderMarkdown('```bash\necho "hi" && ls -la\n```');
+    expect(bash).toContain('class="hljs-');
+  });
+
+  it("言語指定なしは素の等幅表示のまま（hljs マークアップなし）", () => {
+    const html = renderMarkdown("```\nplain text\n```");
+    expect(html).toContain("<pre><code>");
+    expect(html).not.toContain("hljs");
+  });
+
+  it("未知言語は壊れず素のまま", () => {
+    const html = renderMarkdown("```notalang\nfoo bar\n```");
+    expect(html).toContain('class="language-notalang"');
+    expect(html).not.toContain("hljs");
+  });
+
+  it("mermaid ブロックはハイライト対象外（#62 で図として扱う）", () => {
+    const html = renderMarkdown("```mermaid\ngraph TD; A-->B;\n```");
+    expect(html).toContain('class="language-mermaid"');
+    expect(html).not.toContain("hljs");
+  });
+
+  it("コード内の HTML はハイライト後もエスケープされたまま（XSS 退行なし）", () => {
+    const html = renderMarkdown('```ts\nconst s = "<script>alert(1)</script>";\n```');
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("hljs");
+    // img/onerror 系も素通りしない
+    const html2 = renderMarkdown('```html\n<img src=x onerror="alert(1)">\n```');
+    expect(html2).not.toContain("<img");
+  });
+});
+
 // #61 表の集計: <!-- 集計 --> マーカー付き表の直下に合否サマリを出す
 describe("renderMarkdown: 表の集計（<!-- 集計 -->）", () => {
   const parse = (md: string) => {
