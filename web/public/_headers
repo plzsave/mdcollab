@@ -5,4 +5,9 @@
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=()
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'
+  # style-src の 'unsafe-inline' は mermaid（#62）が SVG 内に注入する <style> と style 属性のため。
+  # これが無いと図の線・文字配置・サイズ上限がすべて落ちて表示が崩れる（vite dev では _headers が
+  # 効かないため本番のみ発症）。代わりにユーザー Markdown 由来の <style>/style 属性は
+  # renderMarkdown（DOMPurify FORBID_TAGS/FORBID_ATTR）で禁止し、CSS 注入経路を塞いでいる。
+  # script-src は 'self' のまま（インラインスクリプトは引き続き遮断）。
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'
