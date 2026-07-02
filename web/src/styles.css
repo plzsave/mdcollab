@@ -105,6 +105,39 @@ html.dark body {
   margin: 1.2rem 0;
 }
 
+/* Mermaid 図（```mermaid ブロックの差し替え先・#62） */
+.md-preview .mermaid-figure {
+  margin: 0.8rem 0;
+  overflow-x: auto;
+}
+.md-preview .mermaid-figure svg {
+  max-width: 100%;
+  height: auto;
+}
+.md-preview .mermaid-error {
+  margin: 0.8rem 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #fecaca; /* red-200 */
+  border-radius: 8px;
+  background: #fef2f2; /* red-50 */
+}
+.md-preview .mermaid-error p {
+  margin: 0 0 0.4rem;
+  font-size: 0.85em;
+  color: #b91c1c; /* red-700 */
+}
+.md-preview .mermaid-error pre {
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+}
+.dark .md-preview .mermaid-error {
+  border-color: #7f1d1d; /* red-900 */
+  background: rgba(127, 29, 29, 0.25);
+}
+.dark .md-preview .mermaid-error p {
+  color: #fca5a5; /* red-300 */
+}
+
 /* 表の集計（<!-- 集計 --> マーカー付き表の直下に出す合否サマリ・#61） */
 .md-preview .table-summary {
   margin: -0.4rem 0 0.8rem;

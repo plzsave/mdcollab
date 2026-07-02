@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../api/client";
 import { useDeleteDocument, useSaveDocument, useThreads } from "../api/hooks";
 import { renderMarkdown } from "../lib/markdown";
+import { renderMermaidBlocks } from "../lib/mermaid";
 import { applyHighlights } from "../lib/highlight";
 import { clearDraft, loadDraft, saveDraft } from "../lib/draft";
 import { CommentPanel, type DraftAnchor } from "./CommentPanel";
@@ -94,6 +95,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
     if (!el) return;
     el.innerHTML = html;
     if (threads && threads.length) applyHighlights(el, threads, activeThreadId);
+    void renderMermaidBlocks(el); // ```mermaid を図へ差し替え（#62・非同期）
   }, [html, threads, activeThreadId, mode]);
 
   // アクティブなスレッドのハイライトへスクロール＆フラッシュ。
