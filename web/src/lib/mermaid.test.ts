@@ -72,4 +72,22 @@ describe("renderMermaidBlocks", () => {
     await renderMermaidBlocks(mount("```mermaid\ngraph TD; D-->E;\n```"));
     expect(initializeMock).toHaveBeenCalledWith(expect.objectContaining({ theme: "dark" }));
   });
+
+  it("テーマ切替後の再呼び出しで描画済みの図を新テーマで描き直す", async () => {
+    const el = mount("```mermaid\ngraph TD; T1-->T2;\n```");
+    await renderMermaidBlocks(el); // ライトで描画
+    expect(el.querySelector(".mermaid-figure")?.getAttribute("data-mermaid-theme")).toBe("light");
+
+    document.documentElement.classList.add("dark");
+    await renderMermaidBlocks(el); // コードブロックは無いが、テーマ違いの図を描き直す
+    const fig = el.querySelector(".mermaid-figure");
+    expect(fig?.getAttribute("data-mermaid-theme")).toBe("dark");
+    expect(fig?.querySelector("svg")).not.toBeNull();
+    expect(initializeMock).toHaveBeenLastCalledWith(expect.objectContaining({ theme: "dark" }));
+
+    // 同テーマでの再呼び出しは何もしない（描き直し対象なし）
+    const calls = renderMock.mock.calls.length;
+    await renderMermaidBlocks(el);
+    expect(renderMock.mock.calls.length).toBe(calls);
+  });
 });
