@@ -118,6 +118,44 @@ describe("MarkdownEditor", () => {
     expect(screen.getByRole("button", { name: "上書き保存" })).toBeInTheDocument();
   });
 
+  it("プレビューの集計チェックボックスのトグルがソースへ書き戻され、クリーン時は自動保存される", async () => {
+    const table = ["<!-- 集計 -->", "| 項目 | チェック |", "| --- | --- |", "| a | [ ] |"].join(
+      "\n",
+    );
+    render(<MarkdownEditor doc={makeDoc({ content: table, version: 3 })} />);
+    fireEvent.click(screen.getByRole("button", { name: "プレビュー" }));
+
+    const box = document.querySelector<HTMLInputElement>("input.table-check")!;
+    expect(box).not.toBeNull();
+    expect(box.disabled).toBe(false); // エディタのプレビューでは有効化される
+    fireEvent.click(box);
+
+    // デバウンス（600ms）後に現在の baseVersion で PUT される
+    await waitFor(() => expect(saveMutate).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    const vars = saveMutate.mock.calls[0]?.[0] as { content: string; baseVersion: number };
+    expect(vars.baseVersion).toBe(3);
+    expect(vars.content).toContain("| a | [x] |");
+  });
+
+  it("他に未保存の編集があるとトグルは dirty に積むだけで自動保存しない", async () => {
+    const table = ["<!-- 集計 -->", "| 項目 | チェック |", "| --- | --- |", "| a | [ ] |"].join(
+      "\n",
+    );
+    render(<MarkdownEditor doc={makeDoc({ content: table, version: 3 })} />);
+    // 先に本文を編集して dirty にする
+    fireEvent.change(editorTextarea(), { target: { value: `${table}\n追記` } });
+    fireEvent.click(screen.getByRole("button", { name: "プレビュー" }));
+    fireEvent.click(document.querySelector<HTMLInputElement>("input.table-check")!);
+
+    // トグル自体はソースへ反映される（編集へ戻して確認）
+    fireEvent.click(screen.getByRole("button", { name: "編集" }));
+    expect(editorTextarea().value).toContain("| a | [x] |");
+    expect(editorTextarea().value).toContain("追記");
+    // 自動保存はされない
+    await new Promise((r) => setTimeout(r, 800));
+    expect(saveMutate).not.toHaveBeenCalled();
+  });
+
   it("AI 改稿案は差分モーダルで確認してから反映される（#64）", async () => {
     render(<MarkdownEditor doc={makeDoc({ content: "行1\n行2" })} />);
     fireEvent.click(screen.getByRole("button", { name: "AI レビュー" }));

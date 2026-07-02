@@ -3,7 +3,7 @@ import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../api/client";
 import { useDeleteDocument, useSaveDocument, useThreads } from "../api/hooks";
-import { renderMarkdown } from "../lib/markdown";
+import { renderMarkdown, toggleSummaryCheckboxInSource } from "../lib/markdown";
 import { renderMermaidBlocks } from "../lib/mermaid";
 import { applyHighlights } from "../lib/highlight";
 import { clearDraft, loadDraft, saveDraft } from "../lib/draft";
@@ -92,6 +92,29 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
     return () => window.clearTimeout(t);
   }, [content, dirty, baseVersion, doc.id, restorable]);
 
+  // 表の集計・段階2: プレビューのチェックボックス・トグルの自動保存（デバウンス）。
+  // 連打を 1 回の PUT にまとめ、多重保存による 409 の自爆を避ける。
+  // タイマー発火時に最新の doSave / baseVersion を使うため ref を経由する。
+  const cbSaveTimerRef = useRef<number | null>(null);
+  const savedContentRef = useRef(savedContent);
+  savedContentRef.current = savedContent;
+  const baseVersionRef = useRef(baseVersion);
+  baseVersionRef.current = baseVersion;
+  const doSaveRef = useRef<(version: number) => void>(() => {});
+  const scheduleCheckboxSave = () => {
+    if (cbSaveTimerRef.current !== null) window.clearTimeout(cbSaveTimerRef.current);
+    cbSaveTimerRef.current = window.setTimeout(() => {
+      cbSaveTimerRef.current = null;
+      doSaveRef.current(baseVersionRef.current);
+    }, 600);
+  };
+  useEffect(
+    () => () => {
+      if (cbSaveTimerRef.current !== null) window.clearTimeout(cbSaveTimerRef.current);
+    },
+    [],
+  );
+
   // プレビューは手動で innerHTML を設定し、その上にコメントアンカーのハイライトを重ねる。
   // （dangerouslySetInnerHTML だと React 管理下と DOM 直接操作が衝突するため ref 制御にする）
   useEffect(() => {
@@ -100,6 +123,39 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
     el.innerHTML = html;
     if (threads && threads.length) applyHighlights(el, threads, activeThreadId);
     void renderMermaidBlocks(el); // ```mermaid を図へ差し替え（#62・非同期）
+
+    // 表の集計・段階2: エディタのプレビューだけチェックボックスを有効化し、
+    // トグルをソースの [x]/[ ] へ書き戻す（AiReviewPanel 等の表示は disabled のまま）。
+    el.querySelectorAll<HTMLInputElement>("input.table-check").forEach((b) => {
+      b.disabled = false;
+    });
+    const onToggle = (e: Event) => {
+      const input = e.target;
+      if (!(input instanceof HTMLInputElement) || !input.classList.contains("table-check")) return;
+      const table = input.closest("table[data-summary]");
+      const tr = input.closest("tr");
+      if (!table || !tr) return;
+      const next = toggleSummaryCheckboxInSource(
+        content,
+        Number(table.getAttribute("data-summary-index")),
+        [...table.querySelectorAll("tbody tr")].indexOf(tr),
+        Number(input.dataset.col),
+        input.checked,
+      );
+      if (next === null) {
+        // DOM とソースの対応付けに失敗（実質起きない）。チェックを巻き戻して知らせる。
+        input.checked = !input.checked;
+        toast.error("チェック位置を特定できませんでした");
+        return;
+      }
+      const wasClean = content === savedContentRef.current;
+      setContent(next); // html 再計算で集計表示とチェック状態も追従する
+      // 閲覧中の素早いチェックはそのまま保存（旧実装の挙動）。
+      // 編集中（他に未保存の変更がある）は dirty に積むだけにし、明示保存に任せる。
+      if (wasClean) scheduleCheckboxSave();
+    };
+    el.addEventListener("change", onToggle);
+    return () => el.removeEventListener("change", onToggle);
   }, [html, threads, activeThreadId, mode]);
 
   // アクティブなスレッドのハイライトへスクロール＆フラッシュ。
@@ -216,6 +272,11 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
 
   const doSave = (version: number) => {
     setConflict(null);
+    if (cbSaveTimerRef.current !== null) {
+      // 明示保存が来たらトグルの遅延保存は不要（同じ content を保存するため）
+      window.clearTimeout(cbSaveTimerRef.current);
+      cbSaveTimerRef.current = null;
+    }
     save.mutate(
       { content, baseVersion: version },
       {
@@ -233,6 +294,8 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
       },
     );
   };
+
+  doSaveRef.current = doSave; // トグルの遅延保存が常に最新の content / ハンドラを使うように
 
   // 最新をサーバから取得して自分の編集を破棄。
   const reloadLatest = async () => {

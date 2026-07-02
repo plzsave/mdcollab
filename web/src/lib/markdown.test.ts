@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderMarkdown } from "./markdown";
+import { renderMarkdown, toggleSummaryCheckboxInSource } from "./markdown";
 
 describe("renderMarkdown", () => {
   it("GFM の見出し・リストを HTML 化する", () => {
@@ -152,6 +152,9 @@ describe("renderMarkdown: 表の集計（<!-- 集計 -->）", () => {
     expect(boxes[1].checked).toBe(false);
     expect([...boxes].every((b) => b.disabled)).toBe(true);
     expect(summaryText(div)).toContain("全体: 1/2 件 (50%)");
+    // 段階2のソース書き戻しに使う対応付け属性
+    expect(div.querySelector("table")?.getAttribute("data-summary-index")).toBe("0");
+    expect(boxes[0].dataset.col).toBe("1");
   });
 
   it("合否キーワードのヘッダが無い場合は最終列で集計する（旧実装の縮退仕様）", () => {
@@ -168,6 +171,40 @@ describe("renderMarkdown: 表の集計（<!-- 集計 -->）", () => {
     expect(div.querySelector("table")).not.toBeNull();
     expect(div.querySelector(".table-summary")).toBeNull();
     expect(div.querySelector("td input")).toBeNull();
+  });
+
+  it("toggleSummaryCheckboxInSource: 対象セルのトークンだけを書き換える（2つ目の表・整形保持）", () => {
+    const src = [
+      "<!-- 集計 -->",
+      "| 項目 | チェック |",
+      "| --- | --- |",
+      "| a | [x] |",
+      "",
+      "本文の途中",
+      "",
+      "<!-- summary -->",
+      "| 項目 | 担当 | チェック |",
+      "| :-- | --- | ---: |",
+      "| b | 山田 | [ ] |",
+      "| c | 佐藤 |  |",
+    ].join("\n");
+    // 2つ目の表（index 1）の1行目・チェック列（col 2）を ON
+    const next = toggleSummaryCheckboxInSource(src, 1, 0, 2, true);
+    expect(next).not.toBeNull();
+    const lines = next!.split("\n");
+    expect(lines[10]).toBe("| b | 山田 | [x] |");
+    expect(lines[3]).toBe("| a | [x] |"); // 1つ目の表は不変
+    expect(lines[9]).toBe("| :-- | --- | ---: |"); // 整形（アライン指定）保持
+    // 空セルはトークンを差し込む
+    const next2 = toggleSummaryCheckboxInSource(src, 1, 1, 2, true);
+    expect(next2!.split("\n")[11]).toBe("| c | 佐藤 | [x] |");
+  });
+
+  it("toggleSummaryCheckboxInSource: テキスト値セル・範囲外は null", () => {
+    const src = ["<!-- 集計 -->", "| 項目 | 結果 |", "| --- | --- |", "| a | OK |"].join("\n");
+    expect(toggleSummaryCheckboxInSource(src, 0, 0, 1, true)).toBeNull(); // OK セルは書き換えない
+    expect(toggleSummaryCheckboxInSource(src, 0, 5, 1, true)).toBeNull(); // 行範囲外
+    expect(toggleSummaryCheckboxInSource(src, 3, 0, 1, true)).toBeNull(); // 表インデックス範囲外
   });
 
   it("担当者名に HTML が入っていてもサニタイズ済みで注入されない", () => {
