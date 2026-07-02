@@ -1,5 +1,7 @@
 import { marked } from "marked";
 import DOMPurify from "dompurify";
+// core + 主要言語のみの common ビルド（全言語版よりバンドルが軽い）
+import hljs from "highlight.js/lib/common";
 
 marked.setOptions({ gfm: true, breaks: false });
 
@@ -15,7 +17,36 @@ export function renderMarkdown(md: string): string {
   // （data-* はサニタイズを生き残る）。
   raw = raw.replace(/<!--\s*(?:summary|集計)\s*-->\s*<table/gi, '<table data-summary="1"');
   const clean = DOMPurify.sanitize(raw);
-  return enhanceSummaryTables(clean);
+  return enhanceHtml(clean);
+}
+
+// サニタイズ済み HTML に対する DOM 後処理（表の集計 #61・構文ハイライト #63）。
+// 対象要素が無ければ parse を省いてそのまま返す。
+function enhanceHtml(html: string): string {
+  const hasSummary = html.includes("data-summary");
+  const hasCode = html.includes("<pre>");
+  if (!hasSummary && !hasCode) return html;
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  if (hasSummary) enhanceSummaryTables(doc);
+  if (hasCode) highlightCodeBlocks(doc);
+  return doc.body.innerHTML;
+}
+
+// ─── コードブロックの構文ハイライト（#63） ──────────────────────────────────
+// 言語指定付き（```ts など）のコードブロックだけをトークン色分けする。
+// 言語なし・未知言語・mermaid（#62 で図として扱う）は素の等幅表示のまま。
+// hljs.highlight はテキストを受け取り HTML エスケープ済みのマークアップを返すため、
+// サニタイズ後の注入でも安全（入力は textContent 経由の生テキスト）。
+function highlightCodeBlocks(doc: Document): void {
+  doc.querySelectorAll('pre > code[class*="language-"]').forEach((code) => {
+    const lang = [...code.classList]
+      .find((c) => c.startsWith("language-"))
+      ?.slice("language-".length);
+    if (!lang || lang === "mermaid" || !hljs.getLanguage(lang)) return;
+    const result = hljs.highlight(code.textContent ?? "", { language: lang });
+    code.innerHTML = result.value;
+    code.classList.add("hljs");
+  });
 }
 
 // ─── 表の合否集計（#61） ─────────────────────────────────────────────────────
@@ -118,15 +149,11 @@ function buildTableSummary(doc: Document, table: Element): Element | null {
   return div;
 }
 
-// サニタイズ済み HTML に対する後処理: 集計対象の表へチェックボックス表示と
-// 集計ブロック（表直下）を注入する。対象表が無ければ何もしない。
-function enhanceSummaryTables(html: string): string {
-  if (!html.includes("data-summary")) return html;
-  const doc = new DOMParser().parseFromString(html, "text/html");
+// 集計対象の表へチェックボックス表示と集計ブロック（表直下）を注入する。
+function enhanceSummaryTables(doc: Document): void {
   doc.querySelectorAll("table[data-summary]").forEach((table) => {
     renderStatusCheckboxes(doc, table);
     const summary = buildTableSummary(doc, table);
     if (summary) table.insertAdjacentElement("afterend", summary);
   });
-  return doc.body.innerHTML;
 }
