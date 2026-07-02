@@ -5,6 +5,7 @@ import { api, ApiError } from "../api/client";
 import { useDeleteDocument, useSaveDocument, useThreads } from "../api/hooks";
 import { renderMarkdown, toggleSummaryCheckboxInSource } from "../lib/markdown";
 import { renderMermaidBlocks } from "../lib/mermaid";
+import { useIsDark } from "../lib/useIsDark";
 import { applyHighlights } from "../lib/highlight";
 import { clearDraft, loadDraft, saveDraft } from "../lib/draft";
 import { CommentPanel, type DraftAnchor } from "./CommentPanel";
@@ -61,6 +62,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
 
   const dirty = content !== savedContent;
   const html = useMemo(() => renderMarkdown(content), [content]);
+  const isDark = useIsDark(); // テーマ切替で mermaid 図を新テーマで描き直すトリガ
 
   // 未保存の下書き復元バナー（#22）。マウント時に doc 本文と異なる下書きがあれば提示。
   const [restorable, setRestorable] = useState<string | null>(() => {
@@ -156,7 +158,7 @@ export function MarkdownEditor({ doc }: { doc: DocumentFull }) {
     };
     el.addEventListener("change", onToggle);
     return () => el.removeEventListener("change", onToggle);
-  }, [html, threads, activeThreadId, mode]);
+  }, [html, threads, activeThreadId, mode, isDark]);
 
   // アクティブなスレッドのハイライトへスクロール＆フラッシュ。
   useEffect(() => {
