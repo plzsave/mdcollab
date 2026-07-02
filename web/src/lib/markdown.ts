@@ -95,7 +95,9 @@ function renderStatusCheckboxes(doc: Document, table: Element): void {
     input.className = "table-check";
     input.checked = checked;
     if (checked) input.setAttribute("checked", "");
+    // 既定は表示専用。エディタのプレビューだけが後段で有効化してトグルを本文へ書き戻す（段階2）。
     input.disabled = true;
+    input.dataset.col = String(statusIdx);
     cell.textContent = "";
     cell.classList.add("table-check-cell");
     cell.appendChild(input);
@@ -150,10 +152,71 @@ function buildTableSummary(doc: Document, table: Element): Element | null {
 }
 
 // 集計対象の表へチェックボックス表示と集計ブロック（表直下）を注入する。
+// data-summary-index（集計表の出現順）はソース側の表とトグルを対応付けるのに使う（段階2）。
 function enhanceSummaryTables(doc: Document): void {
-  doc.querySelectorAll("table[data-summary]").forEach((table) => {
+  doc.querySelectorAll("table[data-summary]").forEach((table, idx) => {
+    table.setAttribute("data-summary-index", String(idx));
     renderStatusCheckboxes(doc, table);
     const summary = buildTableSummary(doc, table);
     if (summary) table.insertAdjacentElement("afterend", summary);
   });
+}
+
+// ─── 段階2: プレビューのチェックボックス・トグルを Markdown ソースへ書き戻す ──
+// DOM 側の「N 番目の集計表・行 r・列 c」を、ソース行の該当セルに対応付けて
+// `[x]` / `[ ]` トークンだけを書き換える（他の整形は保持）。
+
+// ソース中の各集計表（マーカー付き）の本文行レンジを出現順に列挙する。
+// 出現順 = DOM の table[data-summary] の順序（renderMarkdown が同じソースから作るため）。
+function locateSummaryTables(lines: string[]): { bodyStart: number; bodyEnd: number }[] {
+  const markerRe = /^[ \t]*<!--\s*(?:summary|集計)\s*-->[ \t]*$/i;
+  const rowRe = /^[ \t]*\|.*\|[ \t]*$/;
+  const isDelim = (l: string) => rowRe.test(l) && /^[\s|:\-]+$/.test(l) && l.includes("-");
+  const tables: { bodyStart: number; bodyEnd: number }[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!markerRe.test(lines[i]!)) continue;
+    let j = i + 1;
+    while (j < lines.length && lines[j]!.trim() === "") j++; // 空行スキップ
+    if (j >= lines.length || !rowRe.test(lines[j]!)) continue; // ヘッダ行
+    if (j + 1 >= lines.length || !isDelim(lines[j + 1]!)) continue; // 区切り行
+    let k = j + 2;
+    const bodyStart = k;
+    while (k < lines.length && rowRe.test(lines[k]!) && !isDelim(lines[k]!)) k++;
+    tables.push({ bodyStart, bodyEnd: k });
+  }
+  return tables;
+}
+
+// 表行の内側セル colIndex（0 始まり）のブラケットトークンだけを書き換える。
+// セルが空なら新規にトークンを差し込む。書き換え不能（テキスト値等）なら null。
+function toggleCellInLine(line: string, colIndex: number, makeChecked: boolean): string | null {
+  const pieces = line.split("|"); // 行は前後にパイプを持つ → 内側セル k は pieces[k+1]
+  const target = colIndex + 1;
+  if (target < 1 || target >= pieces.length - 1) return null;
+  const cell = pieces[target]!;
+  const token = makeChecked ? "[x]" : "[ ]";
+  if (/\[[ xX]\]/.test(cell)) pieces[target] = cell.replace(/\[[ xX]\]/, token);
+  else if (cell.trim() === "") pieces[target] = ` ${token} `;
+  else return null;
+  return pieces.join("|");
+}
+
+/** プレビューのトグル（tableIndex 番目の集計表・行 rowIndex・列 colIndex）を
+ *  ソースへ反映した新しい本文を返す。対応付けに失敗したら null（呼び出し側で巻き戻す）。 */
+export function toggleSummaryCheckboxInSource(
+  src: string,
+  tableIndex: number,
+  rowIndex: number,
+  colIndex: number,
+  checked: boolean,
+): string | null {
+  const lines = (src ?? "").split("\n");
+  const t = locateSummaryTables(lines)[tableIndex];
+  if (!t || rowIndex < 0) return null;
+  const lineNo = t.bodyStart + rowIndex;
+  if (lineNo >= t.bodyEnd) return null;
+  const updated = toggleCellInLine(lines[lineNo]!, colIndex, checked);
+  if (updated === null) return null;
+  lines[lineNo] = updated;
+  return lines.join("\n");
 }
