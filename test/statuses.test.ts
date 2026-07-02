@@ -1,5 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { makeHarness, seedMember } from "./helpers/harness";
+import { eq } from "drizzle-orm";
+import { makeHarness, seedMember, type Harness } from "./helpers/harness";
+import * as schema from "../src/db/schema";
+
+/** documents に最小構成の1行を入れる（statusId の宙吊りテスト用） */
+async function seedDoc(h: Harness, id: string, statusId: string | null) {
+  await h.db.insert(schema.documents).values({
+    id,
+    title: id,
+    createdBy: "o@example.com",
+    statusId,
+  });
+}
+
+async function docStatus(h: Harness, id: string): Promise<string | null> {
+  const [row] = await h.db
+    .select({ statusId: schema.documents.statusId })
+    .from(schema.documents)
+    .where(eq(schema.documents.id, id));
+  return row?.statusId ?? null;
+}
 
 describe("GET/PUT /api/statuses", () => {
   it("401 未ログイン / 403 非メンバー", async () => {
@@ -59,6 +79,44 @@ describe("GET/PUT /api/statuses", () => {
       body: JSON.stringify([{ label: "X" }]),
     });
     expect(res.status).toBe(403);
+  });
+
+  it("置換で消えたステータスを指す文書は statusId が null に寄る（残した文書は不変）", async () => {
+    const h = await makeHarness();
+    await seedMember(h, "o@example.com", "owner");
+    await h.db.insert(schema.statuses).values([
+      { id: "s-keep", label: "Keep", sortOrder: 0 },
+      { id: "s-drop", label: "Drop", sortOrder: 1 },
+    ]);
+    await seedDoc(h, "d-keep", "s-keep");
+    await seedDoc(h, "d-drop", "s-drop");
+    await seedDoc(h, "d-none", null);
+
+    const res = await h.req("/api/statuses", {
+      as: "o@example.com",
+      method: "PUT",
+      body: JSON.stringify([{ id: "s-keep", label: "Keep", sortOrder: 0 }]),
+    });
+    expect(res.status).toBe(200);
+
+    expect(await docStatus(h, "d-keep")).toBe("s-keep");
+    expect(await docStatus(h, "d-drop")).toBeNull();
+    expect(await docStatus(h, "d-none")).toBeNull();
+  });
+
+  it("空配列で全削除すると全文書の statusId が null に寄る", async () => {
+    const h = await makeHarness();
+    await seedMember(h, "o@example.com", "owner");
+    await h.db.insert(schema.statuses).values({ id: "s1", label: "A", sortOrder: 0 });
+    await seedDoc(h, "d1", "s1");
+
+    const res = await h.req("/api/statuses", {
+      as: "o@example.com",
+      method: "PUT",
+      body: JSON.stringify([]),
+    });
+    expect(res.status).toBe(200);
+    expect(await docStatus(h, "d1")).toBeNull();
   });
 
   it("不正な body は 400（配列でない / label 欠落）", async () => {
