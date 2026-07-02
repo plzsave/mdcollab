@@ -19,6 +19,13 @@ describe("renderMarkdown", () => {
     expect(html).not.toContain("onerror");
   });
 
+  it("style タグ・style 属性を除去する（style-src 'unsafe-inline' 下の CSS 注入対策）", () => {
+    const html = renderMarkdown('<style>body{display:none}</style><p style="color:red">x</p>');
+    expect(html).not.toContain("<style");
+    expect(html).not.toContain("display:none");
+    expect(html).not.toContain('style="');
+  });
+
   it("javascript: スキームのリンクを無害化する", () => {
     const html = renderMarkdown("[click](javascript:alert(1))");
     expect(html).not.toContain("javascript:alert(1)");

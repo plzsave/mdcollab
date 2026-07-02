@@ -148,9 +148,10 @@ html.dark body {
   margin: 0.8rem 0;
   overflow-x: auto;
 }
+/* サイズは mermaid 自身の inline style（useMaxWidth: 図の自然幅を上限に width:100%）に任せる。
+   height:auto を足すと inline 指定と競合して図が過大にスケールするため付けない。 */
 .md-preview .mermaid-figure svg {
   max-width: 100%;
-  height: auto;
 }
 .md-preview .mermaid-error {
   margin: 0.8rem 0;

@@ -16,7 +16,9 @@ export function renderMarkdown(md: string): string {
   // DOMPurify は HTML コメントを落とすので、サニタイズ前にオプトインを data 属性へ移す
   // （data-* はサニタイズを生き残る）。
   raw = raw.replace(/<!--\s*(?:summary|集計)\s*-->\s*<table/gi, '<table data-summary="1"');
-  const clean = DOMPurify.sanitize(raw);
+  // CSP の style-src は mermaid のために 'unsafe-inline' を許しているので（web/public/_headers）、
+  // ユーザー Markdown 由来の <style> と style 属性はここで明示的に落とし、CSS 注入経路を塞ぐ。
+  const clean = DOMPurify.sanitize(raw, { FORBID_TAGS: ["style"], FORBID_ATTR: ["style"] });
   return enhanceHtml(clean);
 }
 
