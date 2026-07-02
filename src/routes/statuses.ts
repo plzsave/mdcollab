@@ -1,7 +1,8 @@
 import { Hono } from "hono";
+import { isNotNull, notInArray } from "drizzle-orm";
 import type { Deps } from "../env";
 import { requireMember, requireOwner, type Vars } from "../auth/middleware";
-import { statuses } from "../db/schema";
+import { documents, statuses } from "../db/schema";
 
 // GET /api/statuses   ≈ getStatuses（member）
 // PUT /api/statuses   ≈ saveStatuses（owner・一括置換。order 込み）
@@ -37,6 +38,17 @@ export function statusesRoutes(deps: Deps) {
     const result = await deps.db.transaction(async (tx) => {
       await tx.delete(statuses);
       if (values.length > 0) await tx.insert(statuses).values(values);
+      // 宙吊り解消: documents.statusId に FK が無いため、置換で消えた id を指す文書が
+      // 残り得る。新しい id 集合に無い statusId は未設定（null）へ寄せる。
+      const keepIds = values.map((v) => v.id);
+      await tx
+        .update(documents)
+        .set({ statusId: null })
+        .where(
+          keepIds.length > 0
+            ? notInArray(documents.statusId, keepIds)
+            : isNotNull(documents.statusId),
+        );
       return tx.select().from(statuses).orderBy(statuses.sortOrder);
     });
     return c.json(result);
