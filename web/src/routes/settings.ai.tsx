@@ -24,6 +24,7 @@ function AiSettingsView() {
 
   const [provider, setProvider] = useState("anthropic");
   const [model, setModel] = useState("");
+  const [modelHard, setModelHard] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [repo, setRepo] = useState("");
   const [wantModels, setWantModels] = useState(false);
@@ -34,6 +35,7 @@ function AiSettingsView() {
     if (!settings) return;
     if (settings.provider) setProvider(settings.provider);
     setModel(settings.model ?? "");
+    setModelHard(settings.modelHard ?? "");
     setRepo(settings.githubRepo ?? "");
   }, [settings]);
 
@@ -49,7 +51,13 @@ function AiSettingsView() {
 
   const onSave = () => {
     save.mutate(
-      { provider, model: model.trim() || undefined, apiKey: apiKey.trim() || undefined },
+      {
+        provider,
+        model: model.trim() || undefined,
+        // 空欄は「昇格なし」として明示的にクリア（null）。
+        modelHard: modelHard.trim() || null,
+        apiKey: apiKey.trim() || undefined,
+      },
       {
         onSuccess: () => {
           setApiKey("");
@@ -130,6 +138,20 @@ function AiSettingsView() {
         <datalist id="ai-model-list">
           {models.data?.models.map((m) => <option key={m} value={m} />)}
         </datalist>
+
+        <label className="block text-xs font-medium text-slate-500">
+          昇格先モデル（任意）
+        </label>
+        <input
+          list="ai-model-list"
+          value={modelHard}
+          onChange={(e) => setModelHard(e.target.value)}
+          placeholder="空欄 = 昇格なし"
+          className="w-full rounded border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
+        />
+        <p className="text-[11px] text-slate-400">
+          レビューが上限到達で打ち切られた時だけ、このモデルで一度だけ再実行して救済します（その分のコストは追加でかかります）。
+        </p>
         {models.isLoading && <p className="text-[11px] text-slate-400">モデル取得中…</p>}
         {models.error && (
           <p className="text-[11px] text-red-600 dark:text-red-400">

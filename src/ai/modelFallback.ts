@@ -63,6 +63,21 @@ export interface FallbackRun {
   fellBack: boolean;
 }
 
+// 両ティアのトークン使用量を合算する（昇格時に実際に支払ったコスト＝両 run の合計）。
+function mergeUsage(
+  a: RunReviewAgentResult["usage"],
+  b: RunReviewAgentResult["usage"],
+): RunReviewAgentResult["usage"] {
+  if (!a) return b;
+  if (!b) return a;
+  return {
+    inputTokens: a.inputTokens + b.inputTokens,
+    outputTokens: a.outputTokens + b.outputTokens,
+    cacheReadInputTokens: a.cacheReadInputTokens + b.cacheReadInputTokens,
+    cacheCreationInputTokens: a.cacheCreationInputTokens + b.cacheCreationInputTokens,
+  };
+}
+
 // runReviewAgent を実行し、指定モデルが存在しない/退役なら代替モデルで一度だけ再試行する。
 // 代替が見つからない・代替でも失敗する場合はそのまま投げる（呼び出し側の通常エラー処理へ）。
 export async function runReviewAgentWithModelFallback(
@@ -80,5 +95,52 @@ export async function runReviewAgentWithModelFallback(
     );
     const result = await runReviewAgent({ ...opts, model: fallback });
     return { result, modelUsed: fallback, fellBack: true };
+  }
+}
+
+export interface EscalationRun extends FallbackRun {
+  /** truncated 救済で昇格先モデルの結果に差し替えたか。 */
+  escalated: boolean;
+}
+
+export interface EscalationOpts extends RunReviewAgentOpts {
+  /** 難問昇格先モデル（#84）。未設定 or 基本モデルと同一なら昇格無効。 */
+  modelHard?: string | null;
+  /** 昇格して再実行する直前に呼ばれる（SSE のライブ表示リセット・通知用）。 */
+  onEscalate?: (to: string) => void | Promise<void>;
+}
+
+/**
+ * truncated 昇格（B経路・kb-bot 逆輸入 #84）。常に基本モデルで開始し、
+ * truncated（ターン/ツール上限到達＝手に負えなかった）時だけ昇格先モデルで一度だけ再実行して
+ * 結果を差し替える。事前昇格（難易度推定で最初から上位）は採らない（kb-bot #45 で撤去済み＝
+ * 詰まった時だけ昇格すれば十分で、その方が安い）。「指摘ゼロ」等の内容では昇格しない。
+ * 404/退役は各 run 内で runReviewAgentWithModelFallback が吸収する。
+ * usage は両ティアの合算（実際に支払ったコスト）。昇格先の実行が失敗した場合は
+ * 基本モデルの truncated 結果をそのまま返す（部分結果を失わせない）。
+ */
+export async function runReviewAgentWithEscalation(opts: EscalationOpts): Promise<EscalationRun> {
+  const { modelHard, onEscalate, ...runOpts } = opts;
+  const first = await runReviewAgentWithModelFallback(runOpts);
+  const canEscalate =
+    typeof modelHard === "string" && modelHard !== "" && modelHard !== runOpts.model;
+  if (!canEscalate || !first.result.truncated) return { ...first, escalated: false };
+
+  await onEscalate?.(modelHard);
+  try {
+    const second = await runReviewAgentWithModelFallback({ ...runOpts, model: modelHard });
+    const usage = mergeUsage(first.result.usage, second.result.usage);
+    return {
+      result: { ...second.result, ...(usage ? { usage } : {}) },
+      modelUsed: second.modelUsed,
+      fellBack: second.fellBack,
+      escalated: true,
+    };
+  } catch (e) {
+    console.warn(
+      `[escalation] 昇格先 ${modelHard} での再実行に失敗。基本モデルの truncated 結果を返します:`,
+      e instanceof Error ? e.message : e,
+    );
+    return { ...first, escalated: false };
   }
 }

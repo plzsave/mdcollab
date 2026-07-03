@@ -213,7 +213,7 @@ export function useAiSettings() {
 export function useSaveAiSettings() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { provider: string; model?: string; apiKey?: string }) =>
+    mutationFn: (vars: { provider: string; model?: string; modelHard?: string | null; apiKey?: string }) =>
       api.put<AiSettings>("/api/ai/settings", vars),
     onSuccess: (data) => qc.setQueryData(["ai-settings"], data),
   });

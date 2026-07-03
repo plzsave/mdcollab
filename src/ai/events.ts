@@ -12,7 +12,9 @@ export type AiReviewAction =
   | "threads_superseded"
   | "thread_resolved"
   // 保存済みモデルの退役等で代替モデルにフォールバックした（#81。「設定が古い」検知の信号）
-  | "model_fallback";
+  | "model_fallback"
+  // truncated（上限到達）を昇格先モデルで救済再実行した（#84。頻発するなら基本モデル/上限の見直し信号）
+  | "model_escalated";
 
 // 追記は可観測性のための副作用。失敗しても本処理を止めない（never throw）。
 export async function recordAiEvent(

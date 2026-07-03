@@ -75,7 +75,12 @@ function summarizeRuns(rows: UsageRow[]) {
 async function upsertSettings(
   deps: Deps,
   email: string,
-  patch: { provider?: string | null; model?: string | null; githubRepo?: string | null },
+  patch: {
+    provider?: string | null;
+    model?: string | null;
+    modelHard?: string | null;
+    githubRepo?: string | null;
+  },
 ) {
   const [cur] = await deps.db
     .select()
@@ -86,6 +91,7 @@ async function upsertSettings(
     email,
     provider: patch.provider !== undefined ? patch.provider : (cur?.provider ?? null),
     model: patch.model !== undefined ? patch.model : (cur?.model ?? null),
+    modelHard: patch.modelHard !== undefined ? patch.modelHard : (cur?.modelHard ?? null),
     githubRepo: patch.githubRepo !== undefined ? patch.githubRepo : (cur?.githubRepo ?? null),
   };
   await deps.db
@@ -112,13 +118,23 @@ export function aiRoutes(deps: Deps) {
 
   app.put("/settings", async (c) => {
     const email = c.get("email");
-    const body = await c.req
-      .json<{ provider?: string; apiKey?: string; model?: string }>()
-      .catch(() => ({}) as { provider?: string; apiKey?: string; model?: string });
+    type Body = { provider?: string; apiKey?: string; model?: string; modelHard?: string | null };
+    const body = await c.req.json<Body>().catch(() => ({}) as Body);
     if (!body.provider) {
       return c.json({ error: { code: "BAD_REQUEST", message: "provider required" } }, 400);
     }
-    await upsertSettings(deps, email, { provider: body.provider, model: body.model ?? undefined });
+    // modelHard は難問昇格のオプトイン（#84）。null / 空文字は「昇格なし」へ正規化。
+    const modelHard =
+      body.modelHard === undefined
+        ? undefined
+        : body.modelHard === null || body.modelHard === ""
+          ? null
+          : body.modelHard;
+    await upsertSettings(deps, email, {
+      provider: body.provider,
+      model: body.model ?? undefined,
+      ...(modelHard !== undefined ? { modelHard } : {}),
+    });
     if (typeof body.apiKey === "string" && body.apiKey.length > 0) {
       await upsertKey(deps, email, body.provider, body.apiKey);
     }

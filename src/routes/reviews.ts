@@ -9,7 +9,7 @@ import { anchorTextFor, parseFindings } from "../ai/findings";
 import { AI_THREAD_AUTHOR, recordAiEvent } from "../ai/events";
 import { LIMITS } from "../limits";
 import { type RunReviewAgentResult, type ToolImpl } from "../ai/reviewAgent";
-import { runReviewAgentWithModelFallback } from "../ai/modelFallback";
+import { runReviewAgentWithEscalation } from "../ai/modelFallback";
 import type { LlmUsage } from "../llm/types";
 import {
   fetchRepoFileTool,
@@ -32,6 +32,8 @@ import {
 interface RunConfig {
   provider: string;
   model: string;
+  /** 難問昇格先モデル（#84・未設定なら昇格無効）。 */
+  modelHard: string | null;
   apiKey: string;
 }
 
@@ -46,7 +48,7 @@ async function loadRunConfig(deps: Deps, email: string): Promise<RunConfig | nul
     .limit(1);
   if (!k) return null;
   const apiKey = await decryptSecret(k.encryptedKey, deps.config.encryptionKey);
-  return { provider: s.provider, model: s.model, apiKey };
+  return { provider: s.provider, model: s.model, modelHard: s.modelHard ?? null, apiKey };
 }
 
 async function displayNameOf(deps: Deps, email: string): Promise<string> {
@@ -217,17 +219,21 @@ export function reviewsRoutes(deps: Deps) {
     if (wantsStream(c)) {
       return streamSSE(c, async (stream) => {
         try {
-          const { result: r, modelUsed, fellBack } = await runReviewAgentWithModelFallback({
+          const { result: r, modelUsed, fellBack, escalated } = await runReviewAgentWithEscalation({
             llm: deps.llm,
             provider: cfg.provider,
             model: cfg.model,
+            modelHard: cfg.modelHard,
             apiKey: cfg.apiKey,
             system,
             initialPrompt,
             tools,
             onEvent: (e) => stream.writeSSE({ event: e.type, data: e.data }),
+            // 昇格時はクライアントに合図してライブ表示をリセットさせる（1回目の部分出力を捨てる）。
+            onEscalate: (to) => stream.writeSSE({ event: "escalate", data: JSON.stringify({ to }) }),
           });
           if (fellBack) await recordAiEvent(deps, { documentId: id, actor: email, action: "model_fallback" });
+          if (escalated) await recordAiEvent(deps, { documentId: id, actor: email, action: "model_escalated" });
           const saved = await persist(r, modelUsed);
           await stream.writeSSE({
             event: "done",
@@ -236,6 +242,7 @@ export function reviewsRoutes(deps: Deps) {
               provider: cfg.provider,
               model: modelUsed,
               fellBack,
+              escalated,
               repo: opts.repo,
               toolsUsed: r.toolsUsed,
               truncated: r.truncated,
@@ -252,10 +259,11 @@ export function reviewsRoutes(deps: Deps) {
       });
     }
 
-    const { result: r, modelUsed, fellBack } = await runReviewAgentWithModelFallback({
+    const { result: r, modelUsed, fellBack, escalated } = await runReviewAgentWithEscalation({
       llm: deps.llm,
       provider: cfg.provider,
       model: cfg.model,
+      modelHard: cfg.modelHard,
       apiKey: cfg.apiKey,
       system,
       initialPrompt,
@@ -263,6 +271,7 @@ export function reviewsRoutes(deps: Deps) {
       onEvent: () => {},
     });
     if (fellBack) await recordAiEvent(deps, { documentId: id, actor: email, action: "model_fallback" });
+    if (escalated) await recordAiEvent(deps, { documentId: id, actor: email, action: "model_escalated" });
     const saved = await persist(r, modelUsed);
     return c.json({
       id: saved.id,
@@ -270,6 +279,7 @@ export function reviewsRoutes(deps: Deps) {
       provider: cfg.provider,
       model: modelUsed,
       fellBack,
+      escalated,
       createdAt: saved.createdAt,
       createdByName: await displayNameOf(deps, email),
       toolsUsed: r.toolsUsed,
@@ -338,10 +348,11 @@ export function reviewsRoutes(deps: Deps) {
       getRevisionDiffTool(deps, id),
       webFetchTool(deps),
     ];
-    const { result: r, fellBack } = await runReviewAgentWithModelFallback({
+    const { result: r, fellBack, escalated } = await runReviewAgentWithEscalation({
       llm: deps.llm,
       provider: cfg.provider,
       model: cfg.model,
+      modelHard: cfg.modelHard,
       apiKey: cfg.apiKey,
       system: buildFindingsSystem(true),
       initialPrompt: reviewPrompt(loaded.content, body.instructions ?? ""),
@@ -349,6 +360,7 @@ export function reviewsRoutes(deps: Deps) {
       onEvent: () => {},
     });
     if (fellBack) await recordAiEvent(deps, { documentId: id, actor: email, action: "model_fallback" });
+    if (escalated) await recordAiEvent(deps, { documentId: id, actor: email, action: "model_escalated" });
     const findings = parseFindings(r.text);
 
     // 重複ポリシー: 既存の AI（ai-review）かつ open のスレッドを置換（人間・resolved には触れない）。
@@ -421,10 +433,11 @@ export function reviewsRoutes(deps: Deps) {
     ];
 
     const prompt = `次の Markdown 文書を、レビュー指摘と指示に従って書き直した全文を返してください。\n\n# レビュー\n${body.reviewContent ?? "(なし)"}\n\n# 指示\n${body.instructions ?? "(特になし)"}\n\n# 文書\n${loaded.content}`;
-    const { result: r, modelUsed, fellBack } = await runReviewAgentWithModelFallback({
+    const { result: r, modelUsed, fellBack, escalated } = await runReviewAgentWithEscalation({
       llm: deps.llm,
       provider: cfg.provider,
       model: cfg.model,
+      modelHard: cfg.modelHard,
       apiKey: cfg.apiKey,
       system: buildRevisionSystem(tools.length > 0),
       initialPrompt: prompt,
@@ -432,6 +445,7 @@ export function reviewsRoutes(deps: Deps) {
       onEvent: () => {},
     });
     if (fellBack) await recordAiEvent(deps, { documentId: id, actor: email, action: "model_fallback" });
+    if (escalated) await recordAiEvent(deps, { documentId: id, actor: email, action: "model_escalated" });
     const revised = r.text;
 
     const usageCols = {
@@ -470,6 +484,7 @@ export function reviewsRoutes(deps: Deps) {
       provider: cfg.provider,
       model: modelUsed,
       fellBack,
+      escalated,
       baseVersion: loaded.doc.version,
       toolsUsed: r.toolsUsed,
       truncated: r.truncated,
