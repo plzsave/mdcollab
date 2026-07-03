@@ -32,6 +32,13 @@ function strInput(input: unknown, key: string): string | null {
   return typeof v === "string" ? v : null;
 }
 
+// 数値引数の取り出し（未指定は undefined・数値以外は null=不正）。
+function numInput(input: unknown, key: string): number | null | undefined {
+  const v = (input as Record<string, unknown> | null)?.[key];
+  if (v === undefined || v === null) return undefined;
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
 // 前版→現版の行単位 diff（LCS）。各版を MAX_DIFF_LINES 行に切り詰めてから比較し、
 // 変更行のまわり DIFF_CONTEXT 行だけ残して未変更の長い連続は「…」に畳む（トークン爆発防止）。
 function lineDiff(oldText: string, newText: string): string {
@@ -101,37 +108,84 @@ function lineDiff(oldText: string, newText: string): string {
 }
 
 // fetch_repo_file: 参照リポジトリ内の単一ファイル（固定 repo・PAT）。Phase A から移設。
+// start_line / end_line（1 始まり）で行範囲を指定すると該当行だけを行番号付きで返す（#82）。
 export function fetchRepoFileTool(deps: Deps, repo: string, pat: string): ToolImpl {
   return {
     def: {
       name: "fetch_repo_file",
       description:
-        "参照リポジトリ内の単一ファイルの内容を取得する。文書が参照する実コードを確認したいときにのみ呼ぶ。",
+        "参照リポジトリ内の単一ファイルの内容を取得する。文書が参照する実コードを確認したいときにのみ呼ぶ。" +
+        "大きいファイルは start_line / end_line で範囲指定するとトークンを節約できる（行番号付きで返る）。",
       inputSchema: {
         type: "object",
-        properties: { path: { type: "string", description: "リポジトリ内のファイルパス（例: src/foo.ts）" } },
+        properties: {
+          path: { type: "string", description: "リポジトリ内のファイルパス（例: src/foo.ts）" },
+          start_line: { type: "integer", description: "開始行（1 始まり・任意）" },
+          end_line: { type: "integer", description: "終了行（任意）" },
+        },
         required: ["path"],
       },
     },
     async execute(input) {
       const path = strInput(input, "path");
       if (path == null) return "（不正な入力: path は文字列で指定してください）";
-      return deps.github.fetchRepoFile(repo, path, pat);
+      const start = numInput(input, "start_line");
+      const end = numInput(input, "end_line");
+      if (start === null || end === null) return "（不正な入力: start_line / end_line は数値で指定してください）";
+      return deps.github.fetchRepoFile(repo, path, pat, start, end);
     },
   };
 }
 
 // list_repo_tree: 参照リポジトリのファイルツリー（固定 repo・PAT）。どのファイルがあるか俯瞰してから読むため。
+// 大規模（モノレポ）はトップ階層＋manifest の概要が返るので、subdir で該当パッケージを深掘りする（#82）。
 export function listRepoTreeTool(deps: Deps, repo: string, pat: string): ToolImpl {
   return {
     def: {
       name: "list_repo_tree",
       description:
-        "参照リポジトリのファイル一覧（パス）を取得する。どのファイルを fetch_repo_file で読むか当たりをつけたいときに呼ぶ。",
-      inputSchema: { type: "object", properties: {}, required: [] },
+        "参照リポジトリのファイル一覧（パス）を取得する。どのファイルを fetch_repo_file で読むか当たりをつけたいときに呼ぶ。" +
+        "大規模（モノレポ）では全ファイルではなくトップ階層とパッケージの目印（manifest）の概要が返るので、" +
+        "対象パッケージに当たりを付けて subdir（例: packages/foo）で深掘りする。",
+      inputSchema: {
+        type: "object",
+        properties: {
+          subdir: { type: "string", description: "絞り込むサブディレクトリ（例: packages/foo・任意）" },
+        },
+        required: [],
+      },
     },
-    async execute() {
-      return deps.github.listRepoTree(repo, pat);
+    async execute(input) {
+      const subdir = strInput(input, "subdir") ?? undefined;
+      return deps.github.listRepoTree(repo, pat, subdir);
+    },
+  };
+}
+
+// search_repo_code: 参照リポジトリ内のコードをキーワード検索（固定 repo・PAT・#82）。
+// tree → read だけでは大きいリポで当たりを付けられないため、path:line で該当箇所を素早く見つける。
+export function searchRepoCodeTool(deps: Deps, repo: string, pat: string): ToolImpl {
+  return {
+    def: {
+      name: "search_repo_code",
+      description:
+        "参照リポジトリ内のコードをキーワード検索し、一致した path:line と行の内容を返す。" +
+        "関数名・識別子・文言などから該当箇所を素早く見つけたいときに呼ぶ（その後 fetch_repo_file で読む）。" +
+        "モノレポでヒットが散らばる時は path（例: packages/foo）で検索範囲を絞る。",
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "検索キーワード（関数名・識別子・文言など・空白区切りで AND）" },
+          path: { type: "string", description: "検索範囲を絞るサブディレクトリ（例: packages/foo・任意）" },
+        },
+        required: ["query"],
+      },
+    },
+    async execute(input) {
+      const query = strInput(input, "query");
+      if (query == null || query.trim() === "") return "（不正な入力: query は文字列で指定してください）";
+      const path = strInput(input, "path") ?? undefined;
+      return deps.github.searchRepoCode(repo, query, pat, path);
     },
   };
 }
