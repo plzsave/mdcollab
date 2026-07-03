@@ -15,6 +15,8 @@ export interface ReviewDone {
   repo?: string;
   toolsUsed?: string[];
   truncated?: boolean;
+  /** truncated を昇格先モデルで救済再実行した（#84）。 */
+  escalated?: boolean;
   usage?: ReviewUsage;
 }
 
@@ -27,6 +29,8 @@ export interface ReviewToolEvent {
 interface StreamHandlers {
   onDelta: (text: string) => void;
   onTool?: (tool: ReviewToolEvent) => void;
+  /** 昇格の合図（#84）。ここまでの部分出力は破棄され、昇格先モデルで最初から再実行される。 */
+  onEscalate?: (info: { to: string }) => void;
   onDone: (meta: ReviewDone) => void;
 }
 
@@ -88,6 +92,7 @@ export async function streamReview(
 
       if (event === "delta") handlers.onDelta(data);
       else if (event === "tool") handlers.onTool?.(JSON.parse(data || "{}") as ReviewToolEvent);
+      else if (event === "escalate") handlers.onEscalate?.(JSON.parse(data || "{}") as { to: string });
       else if (event === "done") handlers.onDone(JSON.parse(data || "{}") as ReviewDone);
       else if (event === "error") {
         // ループ途中の失敗（converse throw 等）。SSE 開始後なので HTTP 500 は返せず error イベントで通知される。

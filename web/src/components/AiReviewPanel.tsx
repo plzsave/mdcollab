@@ -87,6 +87,7 @@ export function AiReviewPanel({
   const [error, setError] = useState<string | null>(null);
   const [revised, setRevised] = useState<string | null>(null);
   const [revisedCost, setRevisedCost] = useState<{ usage: ReviewUsage; model: string } | null>(null);
+  const [escalatedTo, setEscalatedTo] = useState<string | null>(null); // 昇格中/済みの表示（#84）
   const [threadMsg, setThreadMsg] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -102,6 +103,7 @@ export function AiReviewPanel({
     setStreamText("");
     setTools([]);
     setTruncated(false);
+    setEscalatedTo(null);
     setCost(null);
     setStreaming(true);
     const ac = new AbortController();
@@ -113,6 +115,12 @@ export function AiReviewPanel({
         {
           onDelta: (t) => setStreamText((prev) => prev + t),
           onTool: (tool) => setTools((prev) => [...prev, tool]),
+          // 昇格（#84）: 1回目の部分出力を破棄して昇格先モデルで最初からやり直す合図。
+          onEscalate: ({ to }) => {
+            setStreamText("");
+            setTools([]);
+            setEscalatedTo(to);
+          },
           onDone: (meta) => {
             setTruncated(!!meta.truncated);
             if (meta.usage) setCost({ usage: meta.usage, model: meta.model });
@@ -262,6 +270,12 @@ export function AiReviewPanel({
             {truncated && (
               <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
                 ⚠ ツール実行が上限に達したため、途中までの結果です。
+              </p>
+            )}
+
+            {escalatedTo && (
+              <p className="mt-2 text-[11px] text-indigo-600 dark:text-indigo-400">
+                ⤴ 上限に達したため {escalatedTo} で再実行{streaming ? "中…" : "しました"}
               </p>
             )}
 

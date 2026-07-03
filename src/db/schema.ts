@@ -166,6 +166,8 @@ export const aiSettings = pgTable("ai_settings", {
   email: text("email").primaryKey(),
   provider: text("provider"),
   model: text("model"),
+  // 難問昇格先モデル（#84）。未設定なら昇格無効（オプトイン・BYO-key のコスト増は本人判断）。
+  modelHard: text("model_hard"),
   githubRepo: text("github_repo"),
 });
 

@@ -78,6 +78,7 @@ export interface Comment {
 export interface AiSettings {
   provider: string | null;
   model: string | null;
+  modelHard: string | null; // 難問昇格先（#84・null なら昇格なし）
   githubRepo: string | null;
   keys: Record<string, boolean>; // provider -> キー設定済みか
   githubPats: string[];

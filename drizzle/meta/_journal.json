@@ -43,6 +43,13 @@
       "when": 1781534354709,
       "tag": "0005_steady_dakota_north",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783050621070,
+      "tag": "0006_living_skin",
+      "breakpoints": true
     }
   ]
 }

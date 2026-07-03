@@ -9,6 +9,8 @@ export const GITHUB_PREFIX = "github:";
 export interface AiSettingsView {
   provider: string | null;
   model: string | null;
+  /** 難問昇格先モデル（#84）。null なら昇格無効。 */
+  modelHard: string | null;
   githubRepo: string | null;
   keys: Record<string, boolean>;
   githubPats: string[];
@@ -34,6 +36,7 @@ export async function loadAiSettings(deps: Deps, email: string): Promise<AiSetti
   return {
     provider: settingsRow?.provider ?? null,
     model: settingsRow?.model ?? null,
+    modelHard: settingsRow?.modelHard ?? null,
     githubRepo: settingsRow?.githubRepo ?? null,
     keys,
     githubPats,
