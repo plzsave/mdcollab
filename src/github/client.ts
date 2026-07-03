@@ -41,7 +41,8 @@ function rejectSecret(path: string): string | null {
 
 // fetch_repo_file の path 検証。`..`・絶対パス・URL・空・先頭スラッシュ・秘匿ファイルを拒否し、
 // 拒否理由を文字列で返す（OK なら null）。リポジトリ越え・SSRF・パストラバーサル・秘密持ち出しを防ぐ。
-function rejectPath(path: string): string | null {
+// export は eval の fixture GitHub（scripts/eval/fakes.ts）が本番と同じ拒否を再現するため。
+export function rejectPath(path: string): string | null {
   if (typeof path !== "string" || path.trim() === "") return "path が空です";
   const p = path.trim();
   if (p.startsWith("/")) return "絶対パスは指定できません";
