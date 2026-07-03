@@ -582,7 +582,9 @@ describe("プロンプトインジェクション耐性の構造的保証（§9 
     const deps = { github: { fetchRepoFile: async () => "x" } } as never;
     const tool = fetchRepoFileTool(deps, "owner/repo", "pat");
     const props = tool.def.inputSchema.properties as Record<string, unknown>;
-    expect(Object.keys(props)).toEqual(["path"]); // repo は工場が固定・スキーマに無い
+    // repo は工場が固定・スキーマに無い（path と行範囲だけがモデル入力・#82 で行範囲追加）
+    expect(props).not.toHaveProperty("repo");
+    expect(Object.keys(props)).toEqual(["path", "start_line", "end_line"]);
   });
 
   it("review-repo: 本文に repo らしき指示があってもツールは工場固定の repo で呼ばれる", async () => {

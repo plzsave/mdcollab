@@ -105,30 +105,37 @@ export function makeFakeLlm(): FakeLlm {
   };
 }
 
-/** ネットワーク不要の fake GithubClient。(repo, pat) と fetchRepoFile 呼び出しを記録する。 */
+/** ネットワーク不要の fake GithubClient。(repo, pat) と各ツール呼び出しの引数を記録する。 */
 export function makeFakeGithub(): GithubClient & {
   calls: { repo: string; pat: string }[];
-  fileCalls: { repo: string; path: string; pat: string }[];
-  treeCalls: { repo: string; pat: string }[];
+  fileCalls: { repo: string; path: string; pat: string; startLine?: number; endLine?: number }[];
+  treeCalls: { repo: string; pat: string; subdir?: string }[];
+  searchCalls: { repo: string; query: string; pat: string; path?: string }[];
 } {
   const calls: { repo: string; pat: string }[] = [];
-  const fileCalls: { repo: string; path: string; pat: string }[] = [];
-  const treeCalls: { repo: string; pat: string }[] = [];
+  const fileCalls: { repo: string; path: string; pat: string; startLine?: number; endLine?: number }[] = [];
+  const treeCalls: { repo: string; pat: string; subdir?: string }[] = [];
+  const searchCalls: { repo: string; query: string; pat: string; path?: string }[] = [];
   return {
     calls,
     fileCalls,
     treeCalls,
+    searchCalls,
     async fetchRepoContext(repo, pat) {
       calls.push({ repo, pat });
       return `リポジトリ: ${repo}\n\n# README（抜粋）\nFAKE-README of ${repo}`;
     },
-    async fetchRepoFile(repo, path, pat) {
-      fileCalls.push({ repo, path, pat });
-      return `FAKE-FILE(${repo}:${path})`;
+    async fetchRepoFile(repo, path, pat, startLine, endLine) {
+      fileCalls.push({ repo, path, pat, ...(startLine != null ? { startLine } : {}), ...(endLine != null ? { endLine } : {}) });
+      return `FAKE-FILE(${repo}:${path}${startLine != null ? `:L${startLine}-${endLine ?? ""}` : ""})`;
     },
-    async listRepoTree(repo, pat) {
-      treeCalls.push({ repo, pat });
-      return `src/a.ts\nsrc/b.ts\nREADME.md`;
+    async listRepoTree(repo, pat, subdir) {
+      treeCalls.push({ repo, pat, ...(subdir != null ? { subdir } : {}) });
+      return subdir ? `${subdir}/a.ts\n${subdir}/b.ts` : `src/a.ts\nsrc/b.ts\nREADME.md`;
+    },
+    async searchRepoCode(repo, query, pat, path) {
+      searchCalls.push({ repo, query, pat, ...(path != null ? { path } : {}) });
+      return `FAKE-SEARCH(${repo}:${query}${path ? `:${path}` : ""})\nsrc/a.ts:1: hit`;
     },
   };
 }
