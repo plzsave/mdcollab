@@ -13,6 +13,7 @@
     "db:push": "drizzle-kit push",
     "seed": "bun run scripts/seed.ts",
     "eval:review": "bun run scripts/eval-review.ts",
+    "eval:review:gate": "bun run scripts/eval-review.ts --gate-only",
     "eval:anchor": "bun run scripts/eval-anchor.ts",
     "build:web": "cd web && bun run build",
     "gen:wrangler": "bash scripts/gen-wrangler.sh",
