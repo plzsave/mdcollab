@@ -9,8 +9,8 @@
 >
 > 本ファイルは移行の経緯・判断の記録として残置（以後は編集しない）。現状の進捗は GitHub issues を正とする。
 
-GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcollab-api-inventory.md`](../../../mdcollab-api-inventory.md)（45 RPC / 46 エンドポイント）と
-移行計画書 [`md-collab-migration-plan.md`](../../../md-collab-migration-plan.md)。
+GAS 版 `md-collab` 脱 GAS 後継の実装 TODO。出典は API 契約 [`mdcollab-api-inventory.md`](./mdcollab-api-inventory.md)（45 RPC / 46 エンドポイント）と
+移行計画書 [`md-collab-migration-plan.md`](./md-collab-migration-plan.md)。
 
 - 凡例: `[x]` 実装済み / `[ ]` 未実装
 - 現状: **フェーズ1（バックエンド API）完了＝パリティ到達**。方針A(全移行)確定、linkFolder のみ保留（DriveStorage と同時期）。
