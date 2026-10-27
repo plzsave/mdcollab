@@ -21,7 +21,7 @@ Markdown 共同編集 + コメントスレッド + AI レビュー。GAS 版 `md
 | AI | anthropic / openai | `complete`/`stream` ＋ tool use ループ（`converse`）。レビューはエージェント化済み |
 | 認証 | 自前 Google OIDC | jose。Cloudflare Access は不採用 |
 | IaC | Terraform / OpenTofu | `infra/modules` + `infra/envs/mdcollab-{cloudflare,aws,gcp}`。状態を持つ R2/Hyperdrive 等を管理 |
-| CI | GitHub Actions | デプロイ実体は `scripts/` に集約。main push で自動デプロイ |
+| CI | GitHub Actions | デプロイ実体は `scripts/` に集約。main push で自動デプロイ（repo Variable `DEPLOY_CF=true` のとき） |
 
 ## 構成
 
@@ -98,7 +98,7 @@ bun run deploy
 | 種別 | キー |
 |---|---|
 | Secrets | `CLOUDFLARE_API_TOKEN`（Workers Scripts Edit ＋ 独自ドメイン時は Zone Workers Routes/DNS Edit）/ `CLOUDFLARE_ACCOUNT_ID` |
-| Variables | `BASE_URL` / `CUSTOM_DOMAIN`(任意) / `S3_ENDPOINT` / `S3_BUCKET` / `HYPERDRIVE_ID` |
+| Variables | `DEPLOY_CF`（`true` でデプロイ有効。未設定ならデプロイしない）/ `BASE_URL` / `CUSTOM_DOMAIN`(任意) / `S3_ENDPOINT` / `S3_BUCKET` / `HYPERDRIVE_ID` |
 
 状態を持つインフラ（R2 / Hyperdrive / WAF）は Terraform/OpenTofu 管理。
 手順は **[infra/envs/mdcollab-cloudflare/IMPORT.md](infra/envs/mdcollab-cloudflare/IMPORT.md)**、

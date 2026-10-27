@@ -1,0 +1,7 @@
+# GitHub Actions は SHA ピンで書く。更新は Dependabot に任せる。
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

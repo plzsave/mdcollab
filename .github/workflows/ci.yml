@@ -2,7 +2,7 @@ name: ci
 
 # Cloudflare 側の CI/CD。
 #   check : 型チェック + テスト + web ビルド（PR と main の両方で実行＝品質ゲート）
-#   deploy: main への push のみ。web をビルドして Worker(+[assets]) をデプロイ
+#   deploy: main への push かつ repo Variable DEPLOY_CF=true のときのみ。web をビルドして Worker(+[assets]) をデプロイ
 # デプロイ実体は scripts/deploy-cf.sh（ローカルでも同じものを使える）。
 # 注: Terraform(R2/Hyperdrive) はこの CI では回さない（手動運用）。
 #     DB migrate は別ワークフロー db-migrate.yml（手動 dispatch + production 環境の承認ゲート）で実行する（#23）。
@@ -27,8 +27,8 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - run: bun install --frozen-lockfile
       - run: make check # typecheck + test（バックエンド）
       - run: bun install --frozen-lockfile
@@ -39,16 +39,18 @@ jobs:
 
   deploy-cf:
     needs: check
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # 運用停止中は repo Variable DEPLOY_CF を未設定（または true 以外）にしてデプロイを止める。
+    # 再開するときは DEPLOY_CF=true を設定し、main に push するか `make deploy-cf` を実行する。
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.DEPLOY_CF == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       # Cloudflare は GitHub OIDC 連携が無いためスコープを絞った API トークンを使う（§5.2）。
       # ランタイム秘密(SESSION_SECRET 等)は `wrangler secret` で投入済み＝デプロイでは不要。
       # 個人のアカウント値はリポジトリに直書きせず、repo の Secrets/Variables から渡す。
       #   Secrets   : CLOUDFLARE_API_TOKEN（必須・秘密） / CLOUDFLARE_ACCOUNT_ID
-      #   Variables : BASE_URL / CUSTOM_DOMAIN(任意) / S3_ENDPOINT / S3_BUCKET / HYPERDRIVE_ID
+      #   Variables : DEPLOY_CF(true でデプロイ有効) / BASE_URL / CUSTOM_DOMAIN(任意) / S3_ENDPOINT / S3_BUCKET / HYPERDRIVE_ID
       # deploy-cf.sh → gen-wrangler.sh がこれらから wrangler.toml を生成する。
       - run: make deploy-cf
         env:
